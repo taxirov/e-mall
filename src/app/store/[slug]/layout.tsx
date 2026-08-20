@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth, signOut } from "@/auth";
 import { Button } from "@/components/ui/button";
 import { Store } from "lucide-react";
+import { ONLINE_ORDERING_ENABLED } from "@/lib/config";
 
 export default async function StoreLayout({
   children,
@@ -28,9 +29,11 @@ export default async function StoreLayout({
           </Link>
           {session?.user?.role === "CUSTOMER" ? (
             <div className="flex items-center gap-2">
-              <Button render={<Link href="/orders" />} nativeButton={false} variant="ghost" size="sm">
-                Buyurtmalarim
-              </Button>
+              {ONLINE_ORDERING_ENABLED && (
+                <Button render={<Link href="/orders" />} nativeButton={false} variant="ghost" size="sm">
+                  Buyurtmalarim
+                </Button>
+              )}
               <form
                 action={async () => {
                   "use server";

@@ -5,9 +5,12 @@ import { prisma } from "@/lib/prisma";
 import { requireRole, requireStoreMember } from "@/lib/authz";
 import { placeOrderSchema } from "@/lib/validations";
 import { broadcastToStore } from "@/lib/realtime";
+import { ONLINE_ORDERING_ENABLED } from "@/lib/config";
 import type { ActionResult } from "./auth";
 
 export async function placeOrder(storeSlug: string, input: unknown): Promise<ActionResult<{ orderId: string }>> {
+  if (!ONLINE_ORDERING_ENABLED) return { ok: false, error: "Onlayn buyurtma hali ishga tushirilmagan" };
+
   const session = await requireRole(["CUSTOMER"]);
 
   const store = await prisma.store.findUnique({ where: { slug: storeSlug } });

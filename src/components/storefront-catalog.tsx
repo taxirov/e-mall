@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/com
 import { cn } from "@/lib/utils";
 import { useCart } from "@/hooks/use-cart";
 import { formatSom } from "@/lib/format";
+import { ONLINE_ORDERING_ENABLED } from "@/lib/config";
 
 type Product = { id: string; name: string; price: string; stock: number; categoryId: string | null; images: string[] };
 type Category = { id: string; name: string };
@@ -41,6 +42,12 @@ export function StorefrontCatalog({
 
   return (
     <div className="pb-24">
+      {!ONLINE_ORDERING_ENABLED && (
+        <div className="mb-4 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          Hozircha faqat mahsulotlarni ko&apos;rish mumkin — onlayn buyurtma tez orada ishga tushadi.
+        </div>
+      )}
+
       <Input placeholder="Mahsulot qidirish..." value={search} onChange={(e) => setSearch(e.target.value)} className="mb-3" />
 
       {categories.length > 0 && (
@@ -69,78 +76,85 @@ export function StorefrontCatalog({
                 <div className="mb-2 aspect-square rounded-md bg-muted" />
                 <p className="line-clamp-2 text-sm font-medium">{product.name}</p>
                 <p className="mt-1 text-sm font-semibold">{formatSom(product.price)} so&apos;m</p>
-                <Button
-                  size="sm"
-                  className="mt-2 w-full"
-                  onClick={() =>
-                    addToCart({ id: product.id, name: product.name, price: Number(product.price), stock: product.stock })
-                  }
-                >
-                  Savatga qo&apos;shish
-                </Button>
+                <p className="text-xs text-muted-foreground">Qoldiq: {product.stock}</p>
+                {ONLINE_ORDERING_ENABLED && (
+                  <Button
+                    size="sm"
+                    className="mt-2 w-full"
+                    onClick={() =>
+                      addToCart({ id: product.id, name: product.name, price: Number(product.price), stock: product.stock })
+                    }
+                  >
+                    Savatga qo&apos;shish
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ))}
         </div>
       )}
 
-      {cart.length > 0 && (
-        <button
-          type="button"
-          onClick={() => setCartOpen(true)}
-          className="fixed inset-x-4 bottom-4 z-30 flex items-center justify-between rounded-lg bg-primary px-4 py-3 text-primary-foreground shadow-lg"
-        >
-          <span className="flex items-center gap-2 font-medium">
-            <ShoppingCart className="size-5" />
-            {itemCount} mahsulot
-          </span>
-          <span className="font-semibold">{formatSom(total)} so&apos;m</span>
-        </button>
-      )}
+      {ONLINE_ORDERING_ENABLED && (
+        <>
+          {cart.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setCartOpen(true)}
+              className="fixed inset-x-4 bottom-4 z-30 flex items-center justify-between rounded-lg bg-primary px-4 py-3 text-primary-foreground shadow-lg"
+            >
+              <span className="flex items-center gap-2 font-medium">
+                <ShoppingCart className="size-5" />
+                {itemCount} mahsulot
+              </span>
+              <span className="font-semibold">{formatSom(total)} so&apos;m</span>
+            </button>
+          )}
 
-      <Sheet open={cartOpen} onOpenChange={setCartOpen}>
-        <SheetContent side="bottom" className="max-h-[85svh] overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>Savat</SheetTitle>
-          </SheetHeader>
-          <div className="space-y-3 px-4">
-            {cart.map((line) => (
-              <div key={line.productId} className="flex items-center justify-between gap-2 border-b pb-2">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{line.name}</p>
-                  <p className="text-xs text-muted-foreground">{formatSom(line.price)} so&apos;m</p>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Button size="icon" variant="outline" className="size-7" onClick={() => changeQty(line.productId, -1)}>
-                    <Minus className="size-3" />
-                  </Button>
-                  <span className="w-6 text-center text-sm">{line.qty}</span>
-                  <Button size="icon" variant="outline" className="size-7" onClick={() => changeQty(line.productId, 1)}>
-                    <Plus className="size-3" />
-                  </Button>
-                  <Button size="icon" variant="ghost" className="size-7" onClick={() => removeLine(line.productId)}>
-                    <Trash2 className="size-3" />
-                  </Button>
+          <Sheet open={cartOpen} onOpenChange={setCartOpen}>
+            <SheetContent side="bottom" className="max-h-[85svh] overflow-y-auto">
+              <SheetHeader>
+                <SheetTitle>Savat</SheetTitle>
+              </SheetHeader>
+              <div className="space-y-3 px-4">
+                {cart.map((line) => (
+                  <div key={line.productId} className="flex items-center justify-between gap-2 border-b pb-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{line.name}</p>
+                      <p className="text-xs text-muted-foreground">{formatSom(line.price)} so&apos;m</p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button size="icon" variant="outline" className="size-7" onClick={() => changeQty(line.productId, -1)}>
+                        <Minus className="size-3" />
+                      </Button>
+                      <span className="w-6 text-center text-sm">{line.qty}</span>
+                      <Button size="icon" variant="outline" className="size-7" onClick={() => changeQty(line.productId, 1)}>
+                        <Plus className="size-3" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="size-7" onClick={() => removeLine(line.productId)}>
+                        <Trash2 className="size-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between text-lg font-semibold">
+                  <span>Jami</span>
+                  <span>{formatSom(total)} so&apos;m</span>
                 </div>
               </div>
-            ))}
-            <div className="flex items-center justify-between text-lg font-semibold">
-              <span>Jami</span>
-              <span>{formatSom(total)} so&apos;m</span>
-            </div>
-          </div>
-          <SheetFooter>
-            <Button
-              render={<Link href="/checkout" />}
-              nativeButton={false}
-              size="lg"
-              className={cn("w-full", cart.length === 0 && "pointer-events-none opacity-50")}
-            >
-              Buyurtmani rasmiylashtirish
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+              <SheetFooter>
+                <Button
+                  render={<Link href="/checkout" />}
+                  nativeButton={false}
+                  size="lg"
+                  className={cn("w-full", cart.length === 0 && "pointer-events-none opacity-50")}
+                >
+                  Buyurtmani rasmiylashtirish
+                </Button>
+              </SheetFooter>
+            </SheetContent>
+          </Sheet>
+        </>
+      )}
     </div>
   );
 }

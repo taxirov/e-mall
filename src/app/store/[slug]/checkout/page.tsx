@@ -3,9 +3,24 @@ import { auth } from "@/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckoutForm } from "@/components/checkout-form";
+import { ONLINE_ORDERING_ENABLED } from "@/lib/config";
 
 export default async function CheckoutPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+
+  if (!ONLINE_ORDERING_ENABLED) {
+    return (
+      <Card className="mx-auto max-w-sm">
+        <CardHeader>
+          <CardTitle>Onlayn buyurtma tez orada</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground">
+          Hozircha do&apos;kon faqat ko&apos;rib chiqish uchun ochiq. Onlayn buyurtma berish yaqin orada ishga tushadi.
+        </CardContent>
+      </Card>
+    );
+  }
+
   const session = await auth();
 
   if (session?.user && session.user.role !== "CUSTOMER") {
