@@ -51,6 +51,19 @@ export const saleSchema = z.object({
 });
 export type SaleInput = z.infer<typeof saleSchema>;
 
+export const slugSchema = z
+  .string()
+  .min(3, "Subdomen kamida 3 ta belgidan iborat bo'lishi kerak")
+  .max(40, "Subdomen 40 ta belgidan oshmasligi kerak")
+  .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Subdomen faqat kichik lotin harflari, raqam va tire (-) dan iborat bo'lishi mumkin");
+
+export const updateStoreSettingsSchema = z.object({
+  name: z.string().min(2, "Do'kon nomi kamida 2 ta belgidan iborat bo'lishi kerak"),
+  description: z.string().max(500, "Tavsif 500 ta belgidan oshmasligi kerak").optional().nullable(),
+  slug: slugSchema,
+});
+export type UpdateStoreSettingsInput = z.infer<typeof updateStoreSettingsSchema>;
+
 export const placeOrderSchema = z.object({
   items: z.array(cartItemSchema).min(1, "Kamida bitta mahsulot tanlang"),
   address: z.string().min(3, "Manzil kiritilishi shart"),
