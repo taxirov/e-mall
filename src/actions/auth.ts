@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
 import { registerStoreSchema } from "@/lib/validations";
 import { slugify, isReservedSlug } from "@/lib/domain";
+import { broadcastToAdmins } from "@/lib/realtime";
 import { z } from "zod";
 import { phoneSchema } from "@/lib/validations";
 
@@ -42,6 +43,8 @@ export async function registerStore(input: unknown): Promise<ActionResult<{ stor
     });
     await tx.user.update({ where: { id: user.id }, data: { storeId: store.id } });
   });
+
+  await broadcastToAdmins("store:new", { name: storeName, slug, ownerName: fullName, ownerPhone: phone });
 
   return { ok: true, data: { storeSlug: slug } };
 }

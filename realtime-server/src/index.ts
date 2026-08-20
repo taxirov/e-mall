@@ -36,7 +36,7 @@ const corsOriginCheck = (origin: string | undefined, callback: (err: Error | nul
 };
 
 interface RealtimeTokenPayload {
-  storeId: string;
+  room: string;
   userId: string;
   role: string;
 }
@@ -49,8 +49,9 @@ app.get("/health", (_req, res) => {
   res.json({ ok: true });
 });
 
-// Called server-to-server by the Next.js app (Vercel) after a Sale/Order/stock
-// change is persisted, to broadcast the event to everyone in that store's room.
+// Called server-to-server by the Next.js app (Vercel) after a DB write, to
+// broadcast an event to everyone connected to a room (a store, or "admin"
+// for platform-wide events like a new store registering).
 app.post("/broadcast", (req, res) => {
   const apiKey = req.header("x-api-key");
   if (apiKey !== API_KEY) {
@@ -58,13 +59,13 @@ app.post("/broadcast", (req, res) => {
     return;
   }
 
-  const { storeId, event, payload } = req.body ?? {};
-  if (typeof storeId !== "string" || typeof event !== "string") {
-    res.status(400).json({ error: "storeId and event are required" });
+  const { room, event, payload } = req.body ?? {};
+  if (typeof room !== "string" || typeof event !== "string") {
+    res.status(400).json({ error: "room and event are required" });
     return;
   }
 
-  io.to(`store:${storeId}`).emit(event, payload ?? null);
+  io.to(room).emit(event, payload ?? null);
   res.json({ ok: true });
 });
 
@@ -81,7 +82,7 @@ io.use((socket, next) => {
   }
   try {
     const decoded = jwt.verify(token, JWT_SECRET as string) as RealtimeTokenPayload;
-    socket.data.storeId = decoded.storeId;
+    socket.data.room = decoded.room;
     socket.data.userId = decoded.userId;
     socket.data.role = decoded.role;
     next();
@@ -91,8 +92,8 @@ io.use((socket, next) => {
 });
 
 io.on("connection", (socket) => {
-  const { storeId } = socket.data as RealtimeTokenPayload;
-  socket.join(`store:${storeId}`);
+  const { room } = socket.data as RealtimeTokenPayload;
+  socket.join(room);
 
   socket.on("disconnect", () => {
     // no-op: socket.io cleans up room membership automatically

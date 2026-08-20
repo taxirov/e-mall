@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Menu, LayoutDashboard, Package, Users, ClipboardList, ShoppingCart, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import { DashboardNotifications } from "@/components/dashboard-notifications";
 import { cn } from "@/lib/utils";
 
 type NavItem = { href: string; label: string; icon: React.ComponentType<{ className?: string }> };
@@ -62,10 +63,13 @@ export function DashboardShell({
 
   return (
     <div className="flex min-h-svh flex-col md:flex-row">
-      <aside className="hidden w-56 shrink-0 border-r bg-muted/20 p-4 md:block">
-        <div className="mb-6 flex items-center gap-2 font-semibold">
-          <Store className="size-5" />
-          e-mall.uz
+      <aside className="hidden w-56 shrink-0 border-r bg-muted/20 p-4 md:flex md:flex-col">
+        <div className="mb-6 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 font-semibold">
+            <Store className="size-5" />
+            e-mall.uz
+          </div>
+          <DashboardNotifications role={role} />
         </div>
         {storeName && <p className="mb-4 truncate text-xs text-muted-foreground">{storeName}</p>}
         {nav}
@@ -76,15 +80,18 @@ export function DashboardShell({
           <Store className="size-5" />
           e-mall.uz
         </div>
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger render={<Button variant="outline" size="icon" />}>
-            <Menu className="size-5" />
-          </SheetTrigger>
-          <SheetContent side="left" className="w-64 p-4">
-            <SheetTitle className="mb-4">{storeName ?? userName}</SheetTitle>
-            {nav}
-          </SheetContent>
-        </Sheet>
+        <div className="flex items-center gap-2">
+          <DashboardNotifications role={role} />
+          <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger render={<Button variant="outline" size="icon" />}>
+              <Menu className="size-5" />
+            </SheetTrigger>
+            <SheetContent side="left" className="w-64 p-4">
+              <SheetTitle className="mb-4">{storeName ?? userName}</SheetTitle>
+              {nav}
+            </SheetContent>
+          </Sheet>
+        </div>
       </header>
 
       <main className="flex-1 p-4 sm:p-6">{children}</main>
