@@ -2,9 +2,13 @@
 
 import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
-import { signIn } from "@/auth";
+import { signIn, signOut } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { registerStore, registerCustomer } from "./auth";
+
+export async function signOutAction() {
+  await signOut({ redirectTo: "/login" });
+}
 
 function dashboardPathFor(role?: string) {
   if (role === "SUPER_ADMIN") return "/dashboard/admin";

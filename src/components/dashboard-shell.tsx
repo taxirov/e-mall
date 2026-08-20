@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Menu, LayoutDashboard, Package, Users, ClipboardList, ShoppingCart, Store, Settings } from "lucide-react";
+import { Menu, LayoutDashboard, Package, Users, ClipboardList, ShoppingCart, Store, Settings, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { DashboardNotifications } from "@/components/dashboard-notifications";
+import { signOutAction } from "@/actions/session";
 import { cn } from "@/lib/utils";
 
 type NavItem = { href: string; label: string; icon: React.ComponentType<{ className?: string }> };
@@ -74,6 +75,12 @@ export function DashboardShell({
         </div>
         {storeName && <p className="mb-4 truncate text-xs text-muted-foreground">{storeName}</p>}
         {nav}
+        <form action={signOutAction} className="mt-auto pt-4">
+          <Button type="submit" variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground">
+            <LogOut className="size-4" />
+            Chiqish
+          </Button>
+        </form>
       </aside>
 
       <header className="flex items-center justify-between border-b p-3 md:hidden">
@@ -90,6 +97,12 @@ export function DashboardShell({
             <SheetContent side="left" className="w-64 p-4">
               <SheetTitle className="mb-4">{storeName ?? userName}</SheetTitle>
               {nav}
+              <form action={signOutAction} className="mt-4">
+                <Button type="submit" variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground">
+                  <LogOut className="size-4" />
+                  Chiqish
+                </Button>
+              </form>
             </SheetContent>
           </Sheet>
         </div>

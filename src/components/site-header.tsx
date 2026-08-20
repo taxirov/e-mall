@@ -1,10 +1,14 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { auth, signOut } from "@/auth";
 import { Button } from "@/components/ui/button";
 import { Store } from "lucide-react";
+import { appOrigin } from "@/lib/domain";
 
 export async function SiteHeader() {
   const session = await auth();
+  const host = (await headers()).get("host") ?? "";
+  const appUrl = appOrigin(host);
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
@@ -16,7 +20,7 @@ export async function SiteHeader() {
 
         {session?.user ? (
           <div className="flex items-center gap-2">
-            <Button render={<Link href={dashboardPathFor(session.user.role)} />} nativeButton={false} variant="ghost" size="sm">
+            <Button render={<Link href={`${appUrl}${dashboardPathFor(session.user.role)}`} />} nativeButton={false} variant="ghost" size="sm">
               Boshqaruv paneli
             </Button>
             <form
@@ -32,10 +36,10 @@ export async function SiteHeader() {
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            <Button render={<Link href="/login" />} nativeButton={false} variant="ghost" size="sm">
+            <Button render={<Link href={`${appUrl}/login`} />} nativeButton={false} variant="ghost" size="sm">
               Kirish
             </Button>
-            <Button render={<Link href="/register" />} nativeButton={false} size="sm">
+            <Button render={<Link href={`${appUrl}/register`} />} nativeButton={false} size="sm">
               Do&apos;kon ochish
             </Button>
           </div>

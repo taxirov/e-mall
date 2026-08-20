@@ -1,4 +1,6 @@
 export const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "e-mall.uz";
+export const APP_SUBDOMAIN = "app";
+export const APP_DOMAIN = `${APP_SUBDOMAIN}.${ROOT_DOMAIN}`;
 
 const RESERVED_SLUGS = new Set([
   "www",
@@ -35,6 +37,22 @@ export function extractStoreSlug(host: string): string | null {
 
   // Vercel preview deployments (project.vercel.app) — treat as root domain.
   return null;
+}
+
+/** True for app.e-mall.uz (or app.localhost in dev) — the logged-in dashboard host. */
+export function isAppHost(host: string): boolean {
+  const hostname = host.split(":")[0].toLowerCase();
+  if (hostname === `${APP_SUBDOMAIN}.localhost`) return true;
+  return hostname === APP_DOMAIN.toLowerCase();
+}
+
+/** Absolute origin for app.e-mall.uz, matching the current environment (http://app.localhost:PORT in dev). */
+export function appOrigin(host: string): string {
+  const [hostname, port] = host.split(":");
+  if (hostname.toLowerCase().endsWith(".localhost") || hostname.toLowerCase() === "localhost") {
+    return `http://${APP_SUBDOMAIN}.localhost${port ? `:${port}` : ""}`;
+  }
+  return `https://${APP_DOMAIN}`;
 }
 
 export function slugify(input: string): string {

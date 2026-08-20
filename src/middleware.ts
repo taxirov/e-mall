@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import NextAuth from "next-auth";
 import { authConfig } from "@/auth.config";
-import { extractStoreSlug } from "@/lib/domain";
+import { extractStoreSlug, isAppHost, appOrigin } from "@/lib/domain";
 
 // Uses the Edge-safe auth config (no Prisma) since middleware runs on the Edge runtime.
 const { auth } = NextAuth(authConfig);
@@ -9,6 +9,10 @@ const { auth } = NextAuth(authConfig);
 // Paths that must always resolve to the shared app (auth, dashboard, api),
 // even when visited through a store's subdomain.
 const GLOBAL_PATH_PREFIXES = ["/_next", "/api", "/dashboard", "/login", "/register", "/register-customer"];
+
+// The subset of GLOBAL_PATH_PREFIXES that live exclusively on app.e-mall.uz —
+// e-mall.uz itself is the public landing page and redirects these over.
+const APP_ONLY_PATH_PREFIXES = ["/dashboard", "/login", "/register", "/register-customer"];
 
 const ROLE_PREFIXES: Record<string, string[]> = {
   "/dashboard/admin": ["SUPER_ADMIN"],
@@ -20,6 +24,7 @@ export default auth((req) => {
   const { nextUrl } = req;
   const host = req.headers.get("host") ?? "";
   const storeSlug = extractStoreSlug(host);
+  const appHost = isAppHost(host);
 
   // Multi-tenant subdomain rewrite: dokon.e-mall.uz/* -> /store/dokon/*
   const isGlobalPath = GLOBAL_PATH_PREFIXES.some((p) => nextUrl.pathname.startsWith(p));
@@ -27,6 +32,23 @@ export default auth((req) => {
     const url = nextUrl.clone();
     url.pathname = `/store/${storeSlug}${nextUrl.pathname}`;
     return NextResponse.rewrite(url);
+  }
+
+  // e-mall.uz is the public landing page — auth/dashboard pages live on
+  // app.e-mall.uz only, so send those requests over there.
+  if (!storeSlug && !appHost) {
+    const isAppOnlyPath = APP_ONLY_PATH_PREFIXES.some((p) => nextUrl.pathname.startsWith(p));
+    if (isAppOnlyPath) {
+      const url = new URL(`${nextUrl.pathname}${nextUrl.search}`, appOrigin(host));
+      return NextResponse.redirect(url);
+    }
+  }
+
+  // app.e-mall.uz has no landing page of its own — "/" goes straight to login.
+  if (appHost && nextUrl.pathname === "/") {
+    const url = nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
   }
 
   // Role-gated dashboard routes
