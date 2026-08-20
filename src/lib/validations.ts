@@ -1,0 +1,60 @@
+import { z } from "zod";
+
+export const phoneSchema = z
+  .string()
+  .regex(/^\+998\d{9}$/, "Telefon raqam +998XXXXXXXXX formatida bo'lishi kerak");
+
+export const registerStoreSchema = z.object({
+  fullName: z.string().min(2, "Ism kamida 2 ta belgidan iborat bo'lishi kerak"),
+  phone: phoneSchema,
+  password: z.string().min(6, "Parol kamida 6 ta belgidan iborat bo'lishi kerak"),
+  storeName: z.string().min(2, "Do'kon nomi kamida 2 ta belgidan iborat bo'lishi kerak"),
+});
+export type RegisterStoreInput = z.infer<typeof registerStoreSchema>;
+
+export const loginSchema = z.object({
+  phone: phoneSchema,
+  password: z.string().min(1, "Parol kiritilishi shart"),
+});
+export type LoginInput = z.infer<typeof loginSchema>;
+
+export const inviteSellerSchema = z.object({
+  fullName: z.string().min(2, "Ism kamida 2 ta belgidan iborat bo'lishi kerak"),
+  phone: phoneSchema,
+  password: z.string().min(6, "Parol kamida 6 ta belgidan iborat bo'lishi kerak"),
+});
+export type InviteSellerInput = z.infer<typeof inviteSellerSchema>;
+
+export const categorySchema = z.object({
+  name: z.string().min(1, "Kategoriya nomi kiritilishi shart"),
+});
+export type CategoryInput = z.infer<typeof categorySchema>;
+
+export const productSchema = z.object({
+  name: z.string().min(1, "Mahsulot nomi kiritilishi shart"),
+  categoryId: z.string().optional().nullable(),
+  sku: z.string().optional().nullable(),
+  price: z.coerce.number().positive("Narx musbat bo'lishi kerak"),
+  stock: z.coerce.number().int().min(0, "Qoldiq manfiy bo'lishi mumkin emas"),
+  isPublished: z.coerce.boolean().default(false),
+});
+export type ProductInput = z.infer<typeof productSchema>;
+
+export const cartItemSchema = z.object({
+  productId: z.string(),
+  qty: z.number().int().positive(),
+});
+
+export const saleSchema = z.object({
+  items: z.array(cartItemSchema).min(1, "Kamida bitta mahsulot tanlang"),
+  paymentMethod: z.enum(["CASH", "CARD"]),
+});
+export type SaleInput = z.infer<typeof saleSchema>;
+
+export const placeOrderSchema = z.object({
+  items: z.array(cartItemSchema).min(1, "Kamida bitta mahsulot tanlang"),
+  address: z.string().min(3, "Manzil kiritilishi shart"),
+  phone: phoneSchema,
+  note: z.string().optional(),
+});
+export type PlaceOrderInput = z.infer<typeof placeOrderSchema>;
