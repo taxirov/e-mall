@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Menu, LayoutDashboard, Package, Users, ClipboardList, ShoppingCart, Store, Settings, LogOut } from "lucide-react";
+import { Menu, LayoutDashboard, Package, Users, ClipboardList, ShoppingCart, Store, Settings, LogOut, Warehouse } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { DashboardNotifications } from "@/components/dashboard-notifications";
@@ -17,6 +17,7 @@ const NAV_ITEMS: Record<string, NavItem[]> = {
   OWNER: [
     { href: "/dashboard/owner", label: "Umumiy ko'rinish", icon: LayoutDashboard },
     { href: "/dashboard/owner/products", label: "Mahsulotlar", icon: Package },
+    { href: "/dashboard/owner/warehouse", label: "Ombor", icon: Warehouse },
     { href: "/dashboard/owner/sellers", label: "Sotuvchilar", icon: Users },
     { href: "/dashboard/owner/orders", label: "Buyurtmalar", icon: ClipboardList },
     { href: "/dashboard/pos", label: "POS", icon: ShoppingCart },

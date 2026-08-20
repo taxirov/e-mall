@@ -31,6 +31,7 @@ export const categorySchema = z.object({
 export type CategoryInput = z.infer<typeof categorySchema>;
 
 export const productSchema = z.object({
+  mxikItemId: z.string().min(1, "Mahsulotni katalogdan tanlang"),
   name: z.string().min(1, "Mahsulot nomi kiritilishi shart"),
   categoryId: z.string().optional().nullable(),
   sku: z.string().optional().nullable(),
@@ -39,6 +40,16 @@ export const productSchema = z.object({
   isPublished: z.coerce.boolean().default(false),
 });
 export type ProductInput = z.infer<typeof productSchema>;
+
+export const stockReceiptSchema = z.object({
+  productId: z.string().min(1, "Mahsulot tanlanishi shart"),
+  quantity: z.coerce.number().int().positive("Miqdor musbat bo'lishi kerak"),
+  costPrice: z.coerce.number().min(0, "Kelgan narx manfiy bo'lishi mumkin emas"),
+  sellingPrice: z.coerce.number().positive("Sotish narxi musbat bo'lishi kerak"),
+  expiryDate: z.string().optional().nullable(),
+  supplier: z.string().optional().nullable(),
+});
+export type StockReceiptInput = z.infer<typeof stockReceiptSchema>;
 
 export const cartItemSchema = z.object({
   productId: z.string(),

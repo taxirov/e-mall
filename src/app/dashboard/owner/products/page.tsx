@@ -12,7 +12,7 @@ export default async function ProductsPage() {
     prisma.product.findMany({
       where: { storeId },
       orderBy: { createdAt: "desc" },
-      include: { category: { select: { name: true } } },
+      include: { category: { select: { name: true } }, mxikItem: { select: { mxikCode: true } } },
     }),
     prisma.category.findMany({ where: { storeId }, orderBy: { name: "asc" } }),
   ]);
@@ -28,6 +28,8 @@ export default async function ProductsPage() {
         isPublished: p.isPublished,
         categoryId: p.categoryId,
         categoryName: p.category?.name ?? null,
+        mxikItemId: p.mxikItemId,
+        mxikCode: p.mxikItem?.mxikCode ?? null,
       }))}
       initialCategories={categories.map((c) => ({ id: c.id, name: c.name }))}
     />

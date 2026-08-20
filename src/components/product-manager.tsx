@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { MxikPicker } from "@/components/mxik-picker";
+import type { MxikSearchResult } from "@/actions/mxik";
 import { formatSom } from "@/lib/format";
 import {
   Dialog,
@@ -37,6 +39,8 @@ type Product = {
   isPublished: boolean;
   categoryId: string | null;
   categoryName: string | null;
+  mxikItemId: string | null;
+  mxikCode: string | null;
 };
 type Category = { id: string; name: string };
 
@@ -52,6 +56,8 @@ export function ProductManager({
   const [newCategory, setNewCategory] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
+  const [selectedMxik, setSelectedMxik] = useState<MxikSearchResult | null>(null);
+  const [nameValue, setNameValue] = useState("");
 
   function refresh() {
     router.refresh();
@@ -90,7 +96,14 @@ export function ProductManager({
   }
 
   function handleSubmitProduct(formData: FormData) {
+    const mxikItemId = editing?.mxikItemId ?? selectedMxik?.id;
+    if (!mxikItemId) {
+      toast.error("Mahsulotni katalogdan tanlang");
+      return;
+    }
+
     const input = {
+      mxikItemId,
       name: formData.get("name"),
       categoryId: formData.get("categoryId") || null,
       sku: formData.get("sku") || null,
@@ -105,6 +118,7 @@ export function ProductManager({
         toast.success(editing ? "Mahsulot yangilandi" : "Mahsulot qo'shildi");
         setDialogOpen(false);
         setEditing(null);
+        setSelectedMxik(null);
         refresh();
       } else toast.error(result.error);
     });
@@ -118,10 +132,25 @@ export function ProductManager({
           open={dialogOpen}
           onOpenChange={(open) => {
             setDialogOpen(open);
-            if (!open) setEditing(null);
+            if (!open) {
+              setEditing(null);
+              setSelectedMxik(null);
+              setNameValue("");
+            }
           }}
         >
-          <DialogTrigger render={<Button size="sm" onClick={() => setEditing(null)} />}>
+          <DialogTrigger
+            render={
+              <Button
+                size="sm"
+                onClick={() => {
+                  setEditing(null);
+                  setSelectedMxik(null);
+                  setNameValue("");
+                }}
+              />
+            }
+          >
             <Plus className="size-4" /> Mahsulot qo&apos;shish
           </DialogTrigger>
           <DialogContent>
@@ -129,9 +158,27 @@ export function ProductManager({
               <DialogTitle>{editing ? "Mahsulotni tahrirlash" : "Yangi mahsulot"}</DialogTitle>
             </DialogHeader>
             <form action={handleSubmitProduct} className="space-y-4">
+              {editing ? (
+                <p className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                  Katalog: {editing.mxikCode ?? "—"}
+                </p>
+              ) : (
+                <MxikPicker
+                  onSelect={(item) => {
+                    setSelectedMxik(item);
+                    setNameValue(item.mxikName);
+                  }}
+                />
+              )}
               <div className="space-y-2">
                 <Label htmlFor="name">Nomi</Label>
-                <Input id="name" name="name" defaultValue={editing?.name} required />
+                <Input
+                  id="name"
+                  name="name"
+                  value={nameValue}
+                  onChange={(e) => setNameValue(e.target.value)}
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="categoryId">Kategoriya</Label>
@@ -229,6 +276,7 @@ export function ProductManager({
                     variant="ghost"
                     onClick={() => {
                       setEditing(p);
+                      setNameValue(p.name);
                       setDialogOpen(true);
                     }}
                   >

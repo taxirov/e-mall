@@ -29,6 +29,9 @@ export async function createProduct(input: unknown): Promise<ActionResult> {
   const parsed = productSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Xatolik" };
 
+  const mxikItem = await prisma.mxikItem.findUnique({ where: { id: parsed.data.mxikItemId } });
+  if (!mxikItem) return { ok: false, error: "Tanlangan mahsulot katalogda topilmadi" };
+
   const { categoryId, ...rest } = parsed.data;
   await prisma.product.create({
     data: { ...rest, categoryId: categoryId || null, storeId, images: [] },
@@ -63,7 +66,12 @@ export async function updateProduct(productId: string, input: unknown): Promise<
 
 export async function deleteProduct(productId: string): Promise<ActionResult> {
   const { storeId } = await requireStoreMember();
-  await prisma.product.deleteMany({ where: { id: productId, storeId } });
+  try {
+    await prisma.product.deleteMany({ where: { id: productId, storeId } });
+  } catch {
+    // Sales/orders/stock receipts reference this product and block deletion.
+    return { ok: false, error: "Bu mahsulot bo'yicha sotuv/buyurtma tarixi bor, shuning uchun o'chirib bo'lmaydi" };
+  }
   revalidatePath("/dashboard/owner/products");
   revalidatePath("/dashboard/pos");
   return { ok: true, data: undefined };
