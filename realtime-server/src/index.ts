@@ -8,10 +8,32 @@ import jwt from "jsonwebtoken";
 const PORT = Number(process.env.PORT ?? 4000);
 const JWT_SECRET = process.env.REALTIME_JWT_SECRET;
 const API_KEY = process.env.REALTIME_API_KEY;
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? "http://localhost:3000").split(",");
 
 if (!JWT_SECRET) throw new Error("REALTIME_JWT_SECRET is not set");
 if (!API_KEY) throw new Error("REALTIME_API_KEY is not set");
+
+// Supports exact origins ("https://e-mall.uz") and single-level wildcards
+// ("https://*.e-mall.uz") so every store subdomain can connect directly.
+const ALLOWED_ORIGIN_PATTERNS = (process.env.ALLOWED_ORIGINS ?? "http://localhost:3000")
+  .split(",")
+  .map((raw) => raw.trim())
+  .filter(Boolean)
+  .map((pattern) => {
+    if (!pattern.includes("*")) return pattern;
+    const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace("\\*", "[^.]+");
+    return new RegExp(`^${escaped}$`);
+  });
+
+function isOriginAllowed(origin: string) {
+  return ALLOWED_ORIGIN_PATTERNS.some((pattern) =>
+    typeof pattern === "string" ? pattern === origin : pattern.test(origin)
+  );
+}
+
+const corsOriginCheck = (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+  if (!origin || isOriginAllowed(origin)) callback(null, true);
+  else callback(new Error("Not allowed by CORS"));
+};
 
 interface RealtimeTokenPayload {
   storeId: string;
@@ -20,7 +42,7 @@ interface RealtimeTokenPayload {
 }
 
 const app = express();
-app.use(cors({ origin: ALLOWED_ORIGINS }));
+app.use(cors({ origin: corsOriginCheck }));
 app.use(express.json());
 
 app.get("/health", (_req, res) => {
@@ -48,7 +70,7 @@ app.post("/broadcast", (req, res) => {
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
-  cors: { origin: ALLOWED_ORIGINS },
+  cors: { origin: corsOriginCheck },
 });
 
 io.use((socket, next) => {
