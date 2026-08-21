@@ -20,7 +20,13 @@ const ALLOWED_ORIGIN_PATTERNS = (process.env.ALLOWED_ORIGINS ?? "http://localhos
   .filter(Boolean)
   .map((pattern) => {
     if (!pattern.includes("*")) return pattern;
-    const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace("\\*", "[^.]+");
+    // Split on the literal "*" first so it's never subject to regex-escaping
+    // (escaping the surrounding "." chars before swapping "*" left a bare "*"
+    // in the regex source, where it's a quantifier, not a wildcard segment).
+    const escaped = pattern
+      .split("*")
+      .map((part) => part.replace(/[.+?^${}()|[\]\\]/g, "\\$&"))
+      .join("[^.]+");
     return new RegExp(`^${escaped}$`);
   });
 
