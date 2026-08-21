@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Menu, LayoutDashboard, Package, Users, ClipboardList, ShoppingCart, Store, Settings, LogOut, Warehouse, Tags, Send } from "lucide-react";
+import { Menu, LayoutDashboard, Package, Users, ClipboardList, ShoppingCart, Settings, LogOut, Warehouse, Tags, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { DashboardNotifications } from "@/components/dashboard-notifications";
@@ -75,7 +76,7 @@ export function DashboardShell({
       <aside className="hidden w-56 shrink-0 border-r bg-muted/20 p-4 md:flex md:flex-col">
         <div className="mb-6 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 font-semibold">
-            <Store className="size-5" />
+            <Image src="/logo-96.png" alt="" width={24} height={24} className="rounded-md" priority />
             e-mall.uz
           </div>
           <DashboardNotifications role={role} />
@@ -92,7 +93,7 @@ export function DashboardShell({
 
       <header className="flex items-center justify-between border-b p-3 md:hidden">
         <div className="flex items-center gap-2 font-semibold">
-          <Store className="size-5" />
+          <Image src="/logo-96.png" alt="" width={24} height={24} className="rounded-md" priority />
           e-mall.uz
         </div>
         <div className="flex items-center gap-2">

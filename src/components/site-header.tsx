@@ -1,8 +1,8 @@
 import Link from "next/link";
+import Image from "next/image";
 import { headers } from "next/headers";
 import { auth, signOut } from "@/auth";
 import { Button } from "@/components/ui/button";
-import { Store } from "lucide-react";
 import { appOrigin } from "@/lib/domain";
 
 export async function SiteHeader() {
@@ -14,7 +14,7 @@ export async function SiteHeader() {
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2 font-semibold">
-          <Store className="size-5" />
+          <Image src="/logo-96.png" alt="" width={28} height={28} className="rounded-md" priority />
           e-mall.uz
         </Link>
 
