@@ -25,15 +25,9 @@ export const inviteSellerSchema = z.object({
 });
 export type InviteSellerInput = z.infer<typeof inviteSellerSchema>;
 
-export const categorySchema = z.object({
-  name: z.string().min(1, "Kategoriya nomi kiritilishi shart"),
-});
-export type CategoryInput = z.infer<typeof categorySchema>;
-
 export const productSchema = z.object({
   mxikItemId: z.string().min(1, "Mahsulotni katalogdan tanlang"),
   name: z.string().min(1, "Mahsulot nomi kiritilishi shart"),
-  categoryId: z.string().optional().nullable(),
   sku: z.string().optional().nullable(),
   price: z.coerce.number().positive("Narx musbat bo'lishi kerak"),
   stock: z.coerce.number().int().min(0, "Qoldiq manfiy bo'lishi mumkin emas"),

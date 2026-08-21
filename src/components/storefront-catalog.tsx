@@ -73,7 +73,12 @@ export function StorefrontCatalog({
           {filtered.map((product) => (
             <Card key={product.id}>
               <CardContent className="p-3">
-                <div className="mb-2 aspect-square rounded-md bg-muted" />
+                <div className="mb-2 aspect-square overflow-hidden rounded-md bg-muted">
+                  {product.images[0] && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={product.images[0]} alt={product.name} className="size-full object-cover" />
+                  )}
+                </div>
                 <p className="line-clamp-2 text-sm font-medium">{product.name}</p>
                 <p className="mt-1 text-sm font-semibold">{formatSom(product.price)} so&apos;m</p>
                 <p className="text-xs text-muted-foreground">Qoldiq: {product.stock}</p>

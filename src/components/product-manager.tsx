@@ -3,8 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, X } from "lucide-react";
-import { createCategory, deleteCategory, createProduct, updateProduct, deleteProduct } from "@/actions/products";
+import { Plus, Trash2, Pencil } from "lucide-react";
+import { createProduct, updateProduct, deleteProduct } from "@/actions/products";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,13 +21,6 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 type Product = {
@@ -37,23 +30,15 @@ type Product = {
   price: string;
   stock: number;
   isPublished: boolean;
-  categoryId: string | null;
   categoryName: string | null;
   mxikItemId: string | null;
   mxikCode: string | null;
+  imageUrl: string | null;
 };
-type Category = { id: string; name: string };
 
-export function ProductManager({
-  initialProducts,
-  initialCategories,
-}: {
-  initialProducts: Product[];
-  initialCategories: Category[];
-}) {
+export function ProductManager({ initialProducts }: { initialProducts: Product[] }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [newCategory, setNewCategory] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [selectedMxik, setSelectedMxik] = useState<MxikSearchResult | null>(null);
@@ -61,28 +46,6 @@ export function ProductManager({
 
   function refresh() {
     router.refresh();
-  }
-
-  function handleAddCategory() {
-    if (!newCategory.trim()) return;
-    startTransition(async () => {
-      const result = await createCategory({ name: newCategory.trim() });
-      if (result.ok) {
-        setNewCategory("");
-        toast.success("Kategoriya qo'shildi");
-        refresh();
-      } else toast.error(result.error);
-    });
-  }
-
-  function handleDeleteCategory(id: string) {
-    startTransition(async () => {
-      const result = await deleteCategory(id);
-      if (result.ok) {
-        toast.success("Kategoriya o'chirildi");
-        refresh();
-      } else toast.error(result.error);
-    });
   }
 
   function handleDeleteProduct(id: string) {
@@ -105,7 +68,6 @@ export function ProductManager({
     const input = {
       mxikItemId,
       name: formData.get("name"),
-      categoryId: formData.get("categoryId") || null,
       sku: formData.get("sku") || null,
       price: formData.get("price"),
       stock: formData.get("stock"),
@@ -180,21 +142,6 @@ export function ProductManager({
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="categoryId">Kategoriya</Label>
-                <Select name="categoryId" defaultValue={editing?.categoryId ?? undefined}>
-                  <SelectTrigger id="categoryId" className="w-full">
-                    <SelectValue placeholder="Kategoriya tanlang" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {initialCategories.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label htmlFor="price">Narxi (so&apos;m)</Label>
@@ -223,35 +170,11 @@ export function ProductManager({
         </Dialog>
       </div>
 
-      <div>
-        <Label className="mb-2 block text-sm">Kategoriyalar</Label>
-        <div className="mb-3 flex flex-wrap gap-2">
-          {initialCategories.map((c) => (
-            <Badge key={c.id} variant="secondary" className="gap-1 pr-1">
-              {c.name}
-              <button onClick={() => handleDeleteCategory(c.id)} className="rounded-full p-0.5 hover:bg-muted-foreground/20">
-                <X className="size-3" />
-              </button>
-            </Badge>
-          ))}
-        </div>
-        <div className="flex max-w-xs gap-2">
-          <Input
-            placeholder="Yangi kategoriya"
-            value={newCategory}
-            onChange={(e) => setNewCategory(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
-          />
-          <Button type="button" variant="outline" size="sm" onClick={handleAddCategory} disabled={pending}>
-            Qo&apos;shish
-          </Button>
-        </div>
-      </div>
-
       <div className="overflow-x-auto rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12"></TableHead>
               <TableHead>Nomi</TableHead>
               <TableHead>Kategoriya</TableHead>
               <TableHead>Narxi</TableHead>
@@ -263,6 +186,14 @@ export function ProductManager({
           <TableBody>
             {initialProducts.map((p) => (
               <TableRow key={p.id}>
+                <TableCell>
+                  <div className="size-9 overflow-hidden rounded bg-muted">
+                    {p.imageUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={p.imageUrl} alt="" className="size-full object-cover" />
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell className="font-medium">{p.name}</TableCell>
                 <TableCell className="text-muted-foreground">{p.categoryName ?? "—"}</TableCell>
                 <TableCell>{formatSom(p.price)} so&apos;m</TableCell>
@@ -290,7 +221,7 @@ export function ProductManager({
             ))}
             {initialProducts.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                <TableCell colSpan={7} className="text-center text-muted-foreground">
                   Hozircha mahsulotlar yo&apos;q
                 </TableCell>
               </TableRow>

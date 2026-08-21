@@ -8,14 +8,11 @@ export default async function ProductsPage() {
   if (!session?.user?.storeId) redirect("/login");
   const storeId = session.user.storeId;
 
-  const [products, categories] = await Promise.all([
-    prisma.product.findMany({
-      where: { storeId },
-      orderBy: { createdAt: "desc" },
-      include: { category: { select: { name: true } }, mxikItem: { select: { mxikCode: true } } },
-    }),
-    prisma.category.findMany({ where: { storeId }, orderBy: { name: "asc" } }),
-  ]);
+  const products = await prisma.product.findMany({
+    where: { storeId },
+    orderBy: { createdAt: "desc" },
+    include: { category: { select: { name: true } }, mxikItem: { select: { mxikCode: true } } },
+  });
 
   return (
     <ProductManager
@@ -26,12 +23,11 @@ export default async function ProductsPage() {
         price: p.price.toString(),
         stock: p.stock,
         isPublished: p.isPublished,
-        categoryId: p.categoryId,
         categoryName: p.category?.name ?? null,
         mxikItemId: p.mxikItemId,
         mxikCode: p.mxikItem?.mxikCode ?? null,
+        imageUrl: p.images[0] ?? null,
       }))}
-      initialCategories={categories.map((c) => ({ id: c.id, name: c.name }))}
     />
   );
 }

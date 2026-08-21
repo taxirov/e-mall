@@ -89,6 +89,7 @@ model Category {
   products  Product[]
   createdAt DateTime  @default(now())
 
+  @@unique([storeId, name])
   @@index([storeId])
 }
 
@@ -108,6 +109,10 @@ model MxikItem {
   barcode         String?
   unit            String?
   packaging       String?
+  /// Cached copy of the soliq.uz product photo (re-hosted on Vercel Blob) —
+  /// resolved once on first use and reused by every store selling this item.
+  imageUrl        String?
+  imageCheckedAt  DateTime?
   products        Product[]
 
   @@index([mxikName])
