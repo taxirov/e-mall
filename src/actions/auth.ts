@@ -2,26 +2,38 @@
 
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
-import { registerStoreSchema } from "@/lib/validations";
+import { registerStoreSchema, registerCustomerSchema, phoneSchema } from "@/lib/validations";
 import { slugify, isReservedSlug } from "@/lib/domain";
 import { broadcastToAdmins } from "@/lib/realtime";
-import { z } from "zod";
-import { phoneSchema } from "@/lib/validations";
 
 export type ActionResult<T = undefined> =
   | { ok: true; data: T }
   | { ok: false; error: string };
+
+/** Checked before sending the user off to the Telegram bot, so a taken phone number is caught early. */
+export async function checkPhoneAvailable(phone: unknown): Promise<ActionResult> {
+  const parsed = phoneSchema.safeParse(phone);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Noto'g'ri raqam" };
+
+  const existing = await prisma.user.findUnique({ where: { phone: parsed.data } });
+  if (existing) return { ok: false, error: "Bu telefon raqam bilan foydalanuvchi allaqachon ro'yxatdan o'tgan" };
+  return { ok: true, data: undefined };
+}
 
 export async function registerStore(input: unknown): Promise<ActionResult<{ storeSlug: string }>> {
   const parsed = registerStoreSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Noto'g'ri ma'lumot" };
   }
-  const { fullName, phone, password, storeName } = parsed.data;
+  const { fullName, phone, password, storeName, storeTypeIds, telegramChatId, telegramPhone } = parsed.data;
 
   const existingUser = await prisma.user.findUnique({ where: { phone } });
   if (existingUser) {
     return { ok: false, error: "Bu telefon raqam bilan foydalanuvchi allaqachon ro'yxatdan o'tgan" };
+  }
+  const existingTelegram = await prisma.user.findUnique({ where: { telegramChatId } });
+  if (existingTelegram) {
+    return { ok: false, error: "Bu Telegram hisobi allaqachon boshqa foydalanuvchiga bog'langan" };
   }
 
   const baseSlug = slugify(storeName) || "dokon";
@@ -36,10 +48,16 @@ export async function registerStore(input: unknown): Promise<ActionResult<{ stor
 
   await prisma.$transaction(async (tx) => {
     const user = await tx.user.create({
-      data: { fullName, phone, passwordHash, role: "OWNER" },
+      data: { fullName, phone, passwordHash, role: "OWNER", telegramChatId, telegramPhone },
     });
     const store = await tx.store.create({
-      data: { name: storeName, slug, ownerId: user.id, status: "PENDING" },
+      data: {
+        name: storeName,
+        slug,
+        ownerId: user.id,
+        status: "PENDING",
+        storeTypes: { connect: storeTypeIds.map((id) => ({ id })) },
+      },
     });
     await tx.user.update({ where: { id: user.id }, data: { storeId: store.id } });
   });
@@ -49,27 +67,25 @@ export async function registerStore(input: unknown): Promise<ActionResult<{ stor
   return { ok: true, data: { storeSlug: slug } };
 }
 
-const registerCustomerSchema = z.object({
-  fullName: z.string().min(2, "Ism kamida 2 ta belgidan iborat bo'lishi kerak"),
-  phone: phoneSchema,
-  password: z.string().min(6, "Parol kamida 6 ta belgidan iborat bo'lishi kerak"),
-});
-
 export async function registerCustomer(input: unknown): Promise<ActionResult> {
   const parsed = registerCustomerSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Noto'g'ri ma'lumot" };
   }
-  const { fullName, phone, password } = parsed.data;
+  const { fullName, phone, password, telegramChatId, telegramPhone } = parsed.data;
 
   const existingUser = await prisma.user.findUnique({ where: { phone } });
   if (existingUser) {
     return { ok: false, error: "Bu telefon raqam bilan foydalanuvchi allaqachon ro'yxatdan o'tgan" };
   }
+  const existingTelegram = await prisma.user.findUnique({ where: { telegramChatId } });
+  if (existingTelegram) {
+    return { ok: false, error: "Bu Telegram hisobi allaqachon boshqa foydalanuvchiga bog'langan" };
+  }
 
   const passwordHash = await hashPassword(password);
   await prisma.user.create({
-    data: { fullName, phone, passwordHash, role: "CUSTOMER" },
+    data: { fullName, phone, passwordHash, role: "CUSTOMER", telegramChatId, telegramPhone },
   });
 
   return { ok: true, data: undefined };

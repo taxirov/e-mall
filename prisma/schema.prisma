@@ -49,6 +49,11 @@ enum EditRequestStatus {
   REJECTED
 }
 
+enum TelegramVerificationType {
+  REGISTER
+  LOGIN
+}
+
 model User {
   id                   String               @id @default(cuid())
   phone                String               @unique
@@ -58,12 +63,19 @@ model User {
   storeId              String?
   store                Store?               @relation("StoreUsers", fields: [storeId], references: [id])
   ownedStore           Store?               @relation("StoreOwner")
+  /// Telegram chat id linked during REGISTER verification — used for
+  /// Telegram-code login lookups. Never shown to the user themselves.
+  telegramChatId       String?              @unique
+  /// The phone number Telegram itself reported via contact-share, which can
+  /// differ from `phone` (what the user typed on the site). Admin-only.
+  telegramPhone        String?
   sales                Sale[]
   orders               Order[]
   stockReceipts        StockReceipt[]
   createdCatalogProducts CatalogProduct[]   @relation("CatalogProductCreatedBy")
   editRequests         ProductEditRequest[] @relation("EditRequestRequestedBy")
   reviewedEditRequests ProductEditRequest[] @relation("EditRequestReviewedBy")
+  telegramVerifications TelegramVerification[]
   createdAt            DateTime             @default(now())
   updatedAt            DateTime             @updatedAt
 
@@ -80,6 +92,7 @@ model Store {
   ownerId              String               @unique
   owner                User                 @relation("StoreOwner", fields: [ownerId], references: [id])
   users                User[]               @relation("StoreUsers")
+  storeTypes           StoreType[]
   products             Product[]
   createdCatalogProducts CatalogProduct[]   @relation("CatalogProductCreatedByStore")
   editRequests         ProductEditRequest[]
@@ -91,12 +104,27 @@ model Store {
   updatedAt            DateTime             @updatedAt
 }
 
+/// A business category a store can operate as (e.g. "Oziq-ovqat",
+/// "Kiyim-kechak") — Super-Admin-managed. A store can have several; each
+/// Category belongs to exactly one, and a store only sees categories from
+/// its own type(s) when adding products.
+model StoreType {
+  id         String     @id @default(cuid())
+  name       String     @unique
+  stores     Store[]
+  categories Category[]
+  createdAt  DateTime   @default(now())
+}
+
 /// Global category tree — managed only by Super Admin. Self-referencing
 /// parentId gives a two-level category → sub-category hierarchy; stores
 /// never create these, they only pick from what already exists.
 model Category {
   id              String           @id @default(cuid())
   name            String
+  imageUrl        String?
+  storeTypeId     String
+  storeType       StoreType        @relation(fields: [storeTypeId], references: [id])
   parentId        String?
   parent          Category?        @relation("CategoryChildren", fields: [parentId], references: [id], onDelete: Cascade)
   children        Category[]       @relation("CategoryChildren")
@@ -105,6 +133,26 @@ model Category {
 
   @@unique([parentId, name])
   @@index([parentId])
+  @@index([storeTypeId])
+}
+
+/// A short-lived code issued by the Telegram bot (via webhook) and consumed
+/// by the site to complete a registration or a passwordless login. Deleted
+/// once consumed; a background sweep isn't needed at this scale since rows
+/// are tiny and expiresAt makes stale ones harmless to leave around briefly.
+model TelegramVerification {
+  id             String                    @id @default(cuid())
+  code           String                    @unique
+  type           TelegramVerificationType
+  telegramChatId String
+  telegramPhone  String?
+  userId         String?
+  user           User?                     @relation(fields: [userId], references: [id])
+  expiresAt      DateTime
+  createdAt      DateTime                  @default(now())
+
+  @@index([telegramChatId])
+  @@index([expiresAt])
 }
 
 /// Shared/global product definition — created once (by whichever store adds

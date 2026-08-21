@@ -8,6 +8,7 @@ import { inviteSeller, removeSeller } from "@/actions/sellers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PhoneInput } from "@/components/phone-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -69,7 +70,7 @@ export function SellerManager({ initialSellers }: { initialSellers: Seller[] }) 
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Telefon raqam</Label>
-                <Input id="phone" name="phone" type="tel" placeholder="+998901234567" required />
+                <PhoneInput />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Vaqtinchalik parol</Label>

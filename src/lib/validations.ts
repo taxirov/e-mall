@@ -9,8 +9,20 @@ export const registerStoreSchema = z.object({
   phone: phoneSchema,
   password: z.string().min(6, "Parol kamida 6 ta belgidan iborat bo'lishi kerak"),
   storeName: z.string().min(2, "Do'kon nomi kamida 2 ta belgidan iborat bo'lishi kerak"),
+  storeTypeIds: z.array(z.string()).min(1, "Kamida bitta do'kon turi tanlanishi kerak"),
+  telegramChatId: z.string().min(1, "Telegram orqali tasdiqlash talab qilinadi"),
+  telegramPhone: z.string().optional().nullable(),
 });
 export type RegisterStoreInput = z.infer<typeof registerStoreSchema>;
+
+export const registerCustomerSchema = z.object({
+  fullName: z.string().min(2, "Ism kamida 2 ta belgidan iborat bo'lishi kerak"),
+  phone: phoneSchema,
+  password: z.string().min(6, "Parol kamida 6 ta belgidan iborat bo'lishi kerak"),
+  telegramChatId: z.string().min(1, "Telegram orqali tasdiqlash talab qilinadi"),
+  telegramPhone: z.string().optional().nullable(),
+});
+export type RegisterCustomerInput = z.infer<typeof registerCustomerSchema>;
 
 export const loginSchema = z.object({
   phone: phoneSchema,
@@ -74,8 +86,38 @@ export type ProductInput = z.infer<typeof productSchema>;
 export const categorySchema = z.object({
   name: z.string().min(1, "Nomi kiritilishi shart"),
   parentId: z.string().optional().nullable(),
+  storeTypeId: z.string().min(1, "Do'kon turi tanlanishi shart"),
+  imageUrl: z.string().optional().nullable(),
 });
 export type CategoryInput = z.infer<typeof categorySchema>;
+
+export const storeTypeSchema = z.object({
+  name: z.string().min(1, "Nomi kiritilishi shart"),
+});
+export type StoreTypeInput = z.infer<typeof storeTypeSchema>;
+
+const baseAdminUserFields = {
+  fullName: z.string().min(2, "Ism kamida 2 ta belgidan iborat bo'lishi kerak"),
+  phone: phoneSchema,
+  password: z.string().min(6, "Parol kamida 6 ta belgidan iborat bo'lishi kerak"),
+};
+
+export const createUserAsAdminSchema = z.discriminatedUnion("role", [
+  z.object({ role: z.literal("CUSTOMER"), ...baseAdminUserFields }),
+  z.object({ role: z.literal("SUPER_ADMIN"), ...baseAdminUserFields }),
+  z.object({
+    role: z.literal("OWNER"),
+    ...baseAdminUserFields,
+    storeName: z.string().min(2, "Do'kon nomi kamida 2 ta belgidan iborat bo'lishi kerak"),
+    storeTypeIds: z.array(z.string()).min(1, "Kamida bitta do'kon turi tanlanishi kerak"),
+  }),
+  z.object({
+    role: z.literal("SELLER"),
+    ...baseAdminUserFields,
+    storeId: z.string().min(1, "Do'kon tanlanishi shart"),
+  }),
+]);
+export type CreateUserAsAdminInput = z.infer<typeof createUserAsAdminSchema>;
 
 export const editRequestSchema = z.object({
   changes: z.record(z.string(), z.unknown()).refine((c) => Object.keys(c).length > 0, "Hech bo'lmaganda bitta maydon o'zgartirilishi kerak"),

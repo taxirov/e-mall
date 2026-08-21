@@ -10,9 +10,19 @@ export async function createCategory(input: unknown): Promise<ActionResult> {
   await requireRole(["SUPER_ADMIN"]);
   const parsed = categorySchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Xatolik" };
+  const { name, parentId, imageUrl } = parsed.data;
+  let { storeTypeId } = parsed.data;
+
+  // Sub-categories always inherit their parent's store type — never trust
+  // a client-supplied storeTypeId that might not match the parent's.
+  if (parentId) {
+    const parent = await prisma.category.findUnique({ where: { id: parentId } });
+    if (!parent) return { ok: false, error: "Ota-kategoriya topilmadi" };
+    storeTypeId = parent.storeTypeId;
+  }
 
   try {
-    await prisma.category.create({ data: parsed.data });
+    await prisma.category.create({ data: { name, parentId, storeTypeId, imageUrl } });
   } catch {
     return { ok: false, error: "Bu nomdagi kategoriya allaqachon mavjud" };
   }
@@ -22,11 +32,11 @@ export async function createCategory(input: unknown): Promise<ActionResult> {
 
 export async function updateCategory(id: string, input: unknown): Promise<ActionResult> {
   await requireRole(["SUPER_ADMIN"]);
-  const parsed = categorySchema.pick({ name: true }).safeParse(input);
+  const parsed = categorySchema.pick({ name: true, imageUrl: true }).safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Xatolik" };
 
   try {
-    await prisma.category.update({ where: { id }, data: { name: parsed.data.name } });
+    await prisma.category.update({ where: { id }, data: parsed.data });
   } catch {
     return { ok: false, error: "Bu nomdagi kategoriya allaqachon mavjud" };
   }

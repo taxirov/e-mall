@@ -14,7 +14,10 @@ export default async function ProductsPage() {
       orderBy: { createdAt: "desc" },
       include: { catalogProduct: { include: { category: true } } },
     }),
-    prisma.category.findMany({ orderBy: { name: "asc" } }),
+    prisma.category.findMany({
+      where: { storeType: { stores: { some: { id: storeId } } } },
+      orderBy: { name: "asc" },
+    }),
   ]);
 
   return (

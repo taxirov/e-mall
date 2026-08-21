@@ -4,7 +4,7 @@ import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
 import { signIn, signOut } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { registerStore, registerCustomer } from "./auth";
+import { registerStore, registerCustomer, type ActionResult } from "./auth";
 
 export async function signOutAction() {
   await signOut({ redirectTo: "/login" });
@@ -41,40 +41,64 @@ export async function authenticate(_prevState: string | undefined, formData: For
   redirect(callbackUrl || dashboardPathFor(user?.role));
 }
 
+/**
+ * Passwordless login via a Telegram-issued 6-digit code. The role (for
+ * redirect) is read non-destructively before signIn() actually consumes the
+ * code through the Credentials provider's authorize() — avoids relying on
+ * the session cookie being visible immediately after signIn() resolves.
+ */
+export async function authenticateWithTelegramCode(code: string): Promise<ActionResult<{ redirectTo: string }>> {
+  const record = await prisma.telegramVerification.findUnique({ where: { code: code.trim() } });
+  if (!record || record.type !== "LOGIN" || !record.userId || record.expiresAt < new Date()) {
+    return { ok: false, error: "Kod noto'g'ri yoki muddati o'tgan" };
+  }
+  const user = await prisma.user.findUnique({ where: { id: record.userId }, select: { role: true } });
+
+  try {
+    await signIn("credentials", { telegramCode: code, redirect: false });
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return { ok: false, error: "Kod noto'g'ri yoki muddati o'tgan" };
+    }
+    throw error;
+  }
+
+  return { ok: true, data: { redirectTo: dashboardPathFor(user?.role) } };
+}
+
 async function signInWithCredentials(phone: string, password: string) {
   await signIn("credentials", { phone, password, redirect: false });
 }
 
-export async function registerStoreAction(_prevState: string | undefined, formData: FormData) {
-  const phone = formData.get("phone") as string;
-  const password = formData.get("password") as string;
-
-  const result = await registerStore({
-    fullName: formData.get("fullName"),
-    phone,
-    password,
-    storeName: formData.get("storeName"),
-  });
-
+export async function completeStoreRegistration(input: {
+  fullName: string;
+  phone: string;
+  password: string;
+  storeName: string;
+  storeTypeIds: string[];
+  telegramChatId: string;
+  telegramPhone: string | null;
+}) {
+  const result = await registerStore(input);
   if (!result.ok) return result.error;
 
-  await signInWithCredentials(phone, password);
+  await signInWithCredentials(input.phone, input.password);
   redirect("/dashboard/owner");
 }
 
-export async function registerCustomerAction(_prevState: string | undefined, formData: FormData) {
-  const phone = formData.get("phone") as string;
-  const password = formData.get("password") as string;
-
-  const result = await registerCustomer({
-    fullName: formData.get("fullName"),
-    phone,
-    password,
-  });
-
+export async function completeCustomerRegistration(
+  input: {
+    fullName: string;
+    phone: string;
+    password: string;
+    telegramChatId: string;
+    telegramPhone: string | null;
+  },
+  callbackUrl?: string
+) {
+  const result = await registerCustomer(input);
   if (!result.ok) return result.error;
 
-  await signInWithCredentials(phone, password);
-  const callbackUrl = formData.get("callbackUrl") as string | null;
+  await signInWithCredentials(input.phone, input.password);
   redirect(callbackUrl || "/");
 }
