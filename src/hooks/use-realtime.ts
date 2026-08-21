@@ -33,7 +33,14 @@ export function useRealtime(onEvent: (event: string, payload: unknown) => void) 
       socket.on("connect", () => setConnected(true));
       socket.on("disconnect", () => setConnected(false));
 
-      for (const event of ["sale:new", "stock:update", "order:new", "store:new"]) {
+      for (const event of [
+        "sale:new",
+        "stock:update",
+        "order:new",
+        "store:new",
+        "product-request:new",
+        "product-request:reviewed",
+      ]) {
         socket.on(event, (payload) => onEventRef.current(event, payload));
       }
     })();
