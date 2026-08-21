@@ -8,7 +8,17 @@ const { auth } = NextAuth(authConfig);
 
 // Paths that must always resolve to the shared app (auth, dashboard, api),
 // even when visited through a store's subdomain.
-const GLOBAL_PATH_PREFIXES = ["/_next", "/api", "/dashboard", "/login", "/register", "/register-customer"];
+const GLOBAL_PATH_PREFIXES = [
+  "/_next",
+  "/api",
+  "/dashboard",
+  "/login",
+  "/register",
+  "/register-customer",
+  "/manifest.webmanifest",
+  "/sw.js",
+  "/offline",
+];
 
 // The subset of GLOBAL_PATH_PREFIXES that live exclusively on app.e-mall.uz —
 // e-mall.uz itself is the public landing page and redirects these over.

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { ServiceWorkerRegister } from "@/components/service-worker-register";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,12 +18,19 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "e-mall.uz — Do'konlar uchun marketplace va POS",
   description: "Do'konlar ro'yxatdan o'tib, onlayn vitrina va POS tizimini bir joyda boshqaradi.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "e-mall.uz",
+  },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  themeColor: "#1c54d6",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -36,6 +44,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
           {children}
           <Toaster position="top-center" />
+          <ServiceWorkerRegister />
         </ThemeProvider>
       </body>
     </html>
