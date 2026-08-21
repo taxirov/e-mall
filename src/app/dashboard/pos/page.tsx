@@ -11,14 +11,26 @@ export default async function PosPage() {
 
   const products = await prisma.product.findMany({
     where: { storeId: session.user.storeId, stock: { gt: 0 } },
-    orderBy: { name: "asc" },
-    select: { id: true, name: true, price: true, stock: true, categoryId: true },
+    orderBy: { catalogProduct: { name: "asc" } },
+    select: {
+      id: true,
+      price: true,
+      stock: true,
+      catalogProduct: { select: { name: true, size: true, categoryId: true, imageUrl: true } },
+    },
   });
 
   return (
     <PosScreen
       storeActive={store.status === "ACTIVE"}
-      initialProducts={products.map((p) => ({ ...p, price: p.price.toString() }))}
+      initialProducts={products.map((p) => ({
+        id: p.id,
+        name: p.catalogProduct.size ? `${p.catalogProduct.name}, ${p.catalogProduct.size}` : p.catalogProduct.name,
+        price: p.price.toString(),
+        stock: p.stock,
+        categoryId: p.catalogProduct.categoryId,
+        imageUrl: p.catalogProduct.imageUrl,
+      }))}
     />
   );
 }

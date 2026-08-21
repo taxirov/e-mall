@@ -43,108 +43,149 @@ enum InventoryReason {
   ADJUSTMENT
 }
 
+enum EditRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
-  id            String         @id @default(cuid())
-  phone         String         @unique
-  passwordHash  String
-  fullName      String
-  role          Role
-  storeId       String?
-  store         Store?         @relation("StoreUsers", fields: [storeId], references: [id])
-  ownedStore    Store?         @relation("StoreOwner")
-  sales         Sale[]
-  orders        Order[]
-  stockReceipts StockReceipt[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id                   String               @id @default(cuid())
+  phone                String               @unique
+  passwordHash         String
+  fullName             String
+  role                 Role
+  storeId              String?
+  store                Store?               @relation("StoreUsers", fields: [storeId], references: [id])
+  ownedStore           Store?               @relation("StoreOwner")
+  sales                Sale[]
+  orders               Order[]
+  stockReceipts        StockReceipt[]
+  createdCatalogProducts CatalogProduct[]   @relation("CatalogProductCreatedBy")
+  editRequests         ProductEditRequest[] @relation("EditRequestRequestedBy")
+  reviewedEditRequests ProductEditRequest[] @relation("EditRequestReviewedBy")
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
 
   @@index([storeId])
 }
 
 model Store {
-  id            String         @id @default(cuid())
-  name          String
-  slug          String         @unique
-  description   String?
-  logoUrl       String?
-  status        StoreStatus    @default(PENDING)
-  ownerId       String         @unique
-  owner         User           @relation("StoreOwner", fields: [ownerId], references: [id])
-  users         User[]         @relation("StoreUsers")
-  categories    Category[]
-  products      Product[]
-  sales         Sale[]
-  orders        Order[]
-  inventoryLogs InventoryLog[]
-  stockReceipts StockReceipt[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id                   String               @id @default(cuid())
+  name                 String
+  slug                 String               @unique
+  description          String?
+  logoUrl              String?
+  status               StoreStatus          @default(PENDING)
+  ownerId              String               @unique
+  owner                User                 @relation("StoreOwner", fields: [ownerId], references: [id])
+  users                User[]               @relation("StoreUsers")
+  products             Product[]
+  createdCatalogProducts CatalogProduct[]   @relation("CatalogProductCreatedByStore")
+  editRequests         ProductEditRequest[]
+  sales                Sale[]
+  orders               Order[]
+  inventoryLogs        InventoryLog[]
+  stockReceipts        StockReceipt[]
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
 }
 
+/// Global category tree — managed only by Super Admin. Self-referencing
+/// parentId gives a two-level category → sub-category hierarchy; stores
+/// never create these, they only pick from what already exists.
 model Category {
-  id        String    @id @default(cuid())
-  storeId   String
-  store     Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  name      String
-  products  Product[]
-  createdAt DateTime  @default(now())
+  id              String           @id @default(cuid())
+  name            String
+  parentId        String?
+  parent          Category?        @relation("CategoryChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children        Category[]       @relation("CategoryChildren")
+  catalogProducts CatalogProduct[]
+  createdAt       DateTime         @default(now())
 
-  @@unique([storeId, name])
-  @@index([storeId])
+  @@unique([parentId, name])
+  @@index([parentId])
 }
 
-/// National goods classifier (MXIK — soliq.uz), imported from the official
-/// list. Store products are picked from here rather than typed freely, so
-/// they're fiscal/e-invoicing-ready from day one.
-model MxikItem {
-  id              String    @id @default(cuid())
-  mxikCode        String    @unique
-  mxikName        String
-  groupName       String?
-  className       String?
-  positionName    String?
-  subpositionName String?
-  brandName       String?
-  attributeName   String?
+/// Shared/global product definition — created once (by whichever store adds
+/// it first, or by Super Admin) and reused by every store afterward. Stores
+/// can't create a duplicate of an existing catalog product; if it needs a
+/// correction they submit a ProductEditRequest instead. Store-specific data
+/// (price, stock, expiry, etc.) lives on Product, not here.
+model CatalogProduct {
+  id              String              @id @default(cuid())
+  name            String
+  categoryId      String
+  category        Category            @relation(fields: [categoryId], references: [id])
+  brand           String?
+  unit            String
+  size            String?
   barcode         String?
-  unit            String?
-  packaging       String?
-  /// Cached copy of the soliq.uz product photo (re-hosted on Vercel Blob) —
-  /// resolved once on first use and reused by every store selling this item.
+  description     String?
   imageUrl        String?
-  imageCheckedAt  DateTime?
+  createdByStoreId String?
+  createdByStore  Store?              @relation("CatalogProductCreatedByStore", fields: [createdByStoreId], references: [id])
+  createdById     String
+  createdBy       User                @relation("CatalogProductCreatedBy", fields: [createdById], references: [id])
   products        Product[]
+  editRequests    ProductEditRequest[]
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
 
-  @@index([mxikName])
-  @@index([groupName])
+  @@index([categoryId])
+  @@index([name])
+  @@index([createdByStoreId])
+}
+
+/// A store's proposal to change a shared CatalogProduct it did not create.
+/// `changes` only carries the fields being proposed (a sparse subset of
+/// CatalogProduct's editable columns); Super Admin applies them on approval.
+model ProductEditRequest {
+  id               String             @id @default(cuid())
+  catalogProductId String
+  catalogProduct   CatalogProduct     @relation(fields: [catalogProductId], references: [id], onDelete: Cascade)
+  storeId          String
+  store            Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  requestedById    String
+  requestedBy      User               @relation("EditRequestRequestedBy", fields: [requestedById], references: [id])
+  changes          Json
+  note             String?
+  status           EditRequestStatus  @default(PENDING)
+  reviewedById     String?
+  reviewedBy       User?              @relation("EditRequestReviewedBy", fields: [reviewedById], references: [id])
+  reviewNote       String?
+  reviewedAt       DateTime?
+  createdAt        DateTime           @default(now())
+
+  @@index([catalogProductId])
+  @@index([status])
+  @@index([storeId])
 }
 
 model Product {
-  id            String         @id @default(cuid())
-  storeId       String
-  store         Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  categoryId    String?
-  category      Category?      @relation(fields: [categoryId], references: [id])
-  mxikItemId    String?
-  mxikItem      MxikItem?      @relation(fields: [mxikItemId], references: [id])
-  name          String
-  sku           String?
-  price         Decimal        @db.Decimal(12, 2)
-  costPrice     Decimal?       @db.Decimal(12, 2)
-  stock         Int            @default(0)
-  expiryDate    DateTime?
-  images        String[]
-  isPublished   Boolean        @default(false)
-  saleItems     SaleItem[]
-  orderItems    OrderItem[]
-  inventoryLogs InventoryLog[]
-  stockReceipts StockReceipt[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id               String         @id @default(cuid())
+  storeId          String
+  store            Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  catalogProductId String
+  catalogProduct   CatalogProduct @relation(fields: [catalogProductId], references: [id])
+  sku              String?
+  price            Decimal        @db.Decimal(12, 2)
+  costPrice        Decimal?       @db.Decimal(12, 2)
+  stock            Int            @default(0)
+  lowStockThreshold Int?
+  expiryDate       DateTime?
+  isPublished      Boolean        @default(false)
+  saleItems        SaleItem[]
+  orderItems       OrderItem[]
+  inventoryLogs    InventoryLog[]
+  stockReceipts    StockReceipt[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
   @@index([storeId])
   @@index([storeId, isPublished])
-  @@index([mxikItemId])
+  @@index([catalogProductId])
+  @@unique([storeId, catalogProductId])
 }
 
 /// A goods-receipt record — every time stock physically arrives at the

@@ -43,6 +43,14 @@ export function DashboardNotifications({ role }: { role: string }) {
       const data = payload as { total: string };
       return `Yangi onlayn buyurtma — ${formatSom(data.total)} so'm`;
     }
+    if (event === "product-request:new" && role === "SUPER_ADMIN") {
+      const data = payload as { productName: string };
+      return `Yangi tahrirlash so'rovi: ${data.productName}`;
+    }
+    if (event === "product-request:reviewed" && (role === "OWNER" || role === "SELLER")) {
+      const data = payload as { decision: "APPROVED" | "REJECTED" };
+      return data.decision === "APPROVED" ? "Tahrirlash so'rovingiz tasdiqlandi" : "Tahrirlash so'rovingiz rad etildi";
+    }
     return null;
   }
 

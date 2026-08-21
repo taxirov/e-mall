@@ -12,7 +12,7 @@ export default async function OrdersPage() {
     orderBy: { createdAt: "desc" },
     include: {
       customer: { select: { fullName: true, phone: true } },
-      items: { include: { product: { select: { name: true } } } },
+      items: { include: { product: { select: { catalogProduct: { select: { name: true } } } } } },
     },
   });
 
@@ -28,7 +28,7 @@ export default async function OrdersPage() {
         createdAt: o.createdAt.toISOString(),
         customerName: o.customer.fullName,
         customerPhone: o.customer.phone,
-        items: o.items.map((i) => ({ name: i.product.name, qty: i.qty, price: i.priceAtOrder.toString() })),
+        items: o.items.map((i) => ({ name: i.product.catalogProduct.name, qty: i.qty, price: i.priceAtOrder.toString() })),
       }))}
     />
   );

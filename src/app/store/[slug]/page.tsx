@@ -5,20 +5,35 @@ export default async function StorefrontPage({ params }: { params: Promise<{ slu
   const { slug } = await params;
   const store = await prisma.store.findUniqueOrThrow({ where: { slug } });
 
-  const [products, categories] = await Promise.all([
-    prisma.product.findMany({
-      where: { storeId: store.id, isPublished: true, stock: { gt: 0 } },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true, price: true, stock: true, categoryId: true, images: true },
-    }),
-    prisma.category.findMany({ where: { storeId: store.id }, orderBy: { name: "asc" } }),
-  ]);
+  const products = await prisma.product.findMany({
+    where: { storeId: store.id, isPublished: true, stock: { gt: 0 } },
+    orderBy: { catalogProduct: { name: "asc" } },
+    select: {
+      id: true,
+      price: true,
+      stock: true,
+      catalogProduct: { select: { name: true, size: true, imageUrl: true, category: true } },
+    },
+  });
+
+  const categoriesById = new Map<string, { id: string; name: string }>();
+  for (const p of products) {
+    const c = p.catalogProduct.category;
+    if (!categoriesById.has(c.id)) categoriesById.set(c.id, { id: c.id, name: c.name });
+  }
 
   return (
     <StorefrontCatalog
       storeSlug={slug}
-      initialProducts={products.map((p) => ({ ...p, price: p.price.toString() }))}
-      categories={categories}
+      initialProducts={products.map((p) => ({
+        id: p.id,
+        name: p.catalogProduct.size ? `${p.catalogProduct.name}, ${p.catalogProduct.size}` : p.catalogProduct.name,
+        price: p.price.toString(),
+        stock: p.stock,
+        categoryId: p.catalogProduct.category.id,
+        imageUrl: p.catalogProduct.imageUrl,
+      }))}
+      categories={Array.from(categoriesById.values()).sort((a, b) => a.name.localeCompare(b.name))}
     />
   );
 }

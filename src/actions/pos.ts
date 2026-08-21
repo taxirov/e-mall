@@ -14,13 +14,16 @@ export async function createSale(input: unknown): Promise<ActionResult<{ saleId:
   const { items, paymentMethod } = parsed.data;
 
   const productIds = items.map((i) => i.productId);
-  const products = await prisma.product.findMany({ where: { id: { in: productIds }, storeId } });
+  const products = await prisma.product.findMany({
+    where: { id: { in: productIds }, storeId },
+    include: { catalogProduct: { select: { name: true } } },
+  });
   const productMap = new Map(products.map((p) => [p.id, p]));
 
   for (const item of items) {
     const product = productMap.get(item.productId);
     if (!product) return { ok: false, error: "Mahsulot topilmadi" };
-    if (product.stock < item.qty) return { ok: false, error: `"${product.name}" uchun qoldiq yetarli emas` };
+    if (product.stock < item.qty) return { ok: false, error: `"${product.catalogProduct.name}" uchun qoldiq yetarli emas` };
   }
 
   const total = items.reduce((sum, item) => {

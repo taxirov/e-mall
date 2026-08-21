@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { useRealtime } from "@/hooks/use-realtime";
 import { formatSom } from "@/lib/format";
 
-type Product = { id: string; name: string; price: string; stock: number; categoryId: string | null };
+type Product = { id: string; name: string; price: string; stock: number; categoryId: string | null; imageUrl: string | null };
 type CartLine = { productId: string; name: string; price: number; qty: number; maxStock: number };
 
 export function PosScreen({ storeActive, initialProducts }: { storeActive: boolean; initialProducts: Product[] }) {
@@ -120,6 +120,12 @@ export function PosScreen({ storeActive, initialProducts }: { storeActive: boole
             <button key={product.id} type="button" onClick={() => addToCart(product)} className="text-left">
               <Card className="h-full transition-colors hover:border-primary active:scale-[0.98]">
                 <CardContent className="p-3">
+                  {product.imageUrl && (
+                    <div className="mb-2 aspect-square overflow-hidden rounded bg-muted">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={product.imageUrl} alt="" className="size-full object-cover" />
+                    </div>
+                  )}
                   <p className="line-clamp-2 text-sm font-medium">{product.name}</p>
                   <p className="mt-1 text-sm font-semibold">{formatSom(product.price)} so&apos;m</p>
                   <p className="text-xs text-muted-foreground">Qoldiq: {product.stock}</p>

@@ -11,22 +11,26 @@ export default async function WarehousePage() {
   const [products, receipts] = await Promise.all([
     prisma.product.findMany({
       where: { storeId },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true, stock: true, price: true, costPrice: true, expiryDate: true },
+      orderBy: { catalogProduct: { name: "asc" } },
+      select: { id: true, stock: true, price: true, costPrice: true, expiryDate: true, catalogProduct: { select: { name: true, size: true } } },
     }),
     prisma.stockReceipt.findMany({
       where: { storeId },
       orderBy: { createdAt: "desc" },
       take: 50,
-      include: { product: { select: { name: true } }, receivedBy: { select: { fullName: true } } },
+      include: { product: { select: { catalogProduct: { select: { name: true, size: true } } } }, receivedBy: { select: { fullName: true } } },
     }),
   ]);
+
+  function displayName(catalogProduct: { name: string; size: string | null }) {
+    return catalogProduct.size ? `${catalogProduct.name}, ${catalogProduct.size}` : catalogProduct.name;
+  }
 
   return (
     <WarehouseManager
       products={products.map((p) => ({
         id: p.id,
-        name: p.name,
+        name: displayName(p.catalogProduct),
         stock: p.stock,
         price: p.price.toString(),
         costPrice: p.costPrice?.toString() ?? null,
@@ -34,7 +38,7 @@ export default async function WarehousePage() {
       }))}
       receipts={receipts.map((r) => ({
         id: r.id,
-        productName: r.product.name,
+        productName: displayName(r.product.catalogProduct),
         quantity: r.quantity,
         costPrice: r.costPrice.toString(),
         sellingPrice: r.sellingPrice.toString(),

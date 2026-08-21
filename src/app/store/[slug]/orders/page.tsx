@@ -22,7 +22,7 @@ export default async function CustomerOrdersPage({ params }: { params: Promise<{
   const orders = await prisma.order.findMany({
     where: { storeId: store.id, customerId: session.user.id },
     orderBy: { createdAt: "desc" },
-    include: { items: { include: { product: { select: { name: true } } } } },
+    include: { items: { include: { product: { select: { catalogProduct: { select: { name: true } } } } } } },
   });
 
   return (
@@ -43,7 +43,7 @@ export default async function CustomerOrdersPage({ params }: { params: Promise<{
               <ul className="mb-2 text-sm text-muted-foreground">
                 {order.items.map((item, idx) => (
                   <li key={idx}>
-                    {item.product.name} × {item.qty}
+                    {item.product.catalogProduct.name} × {item.qty}
                   </li>
                 ))}
               </ul>

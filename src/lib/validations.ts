@@ -25,15 +25,63 @@ export const inviteSellerSchema = z.object({
 });
 export type InviteSellerInput = z.infer<typeof inviteSellerSchema>;
 
-export const productSchema = z.object({
-  mxikItemId: z.string().min(1, "Mahsulotni katalogdan tanlang"),
+export const UNIT_OPTIONS = [
+  "dona",
+  "kg",
+  "gramm",
+  "litr",
+  "ml",
+  "metr",
+  "m2",
+  "quti",
+  "blok",
+  "boshqa",
+] as const;
+
+/** Shared/global catalog-product fields — used both for a store's "create new" flow and for admin's direct catalog management. */
+export const catalogProductSchema = z.object({
   name: z.string().min(1, "Mahsulot nomi kiritilishi shart"),
-  sku: z.string().optional().nullable(),
-  price: z.coerce.number().positive("Narx musbat bo'lishi kerak"),
-  stock: z.coerce.number().int().min(0, "Qoldiq manfiy bo'lishi mumkin emas"),
-  isPublished: z.coerce.boolean().default(false),
+  categoryId: z.string().min(1, "Kategoriya tanlanishi shart"),
+  brand: z.string().optional().nullable(),
+  unit: z.string().min(1, "O'lchov birligi tanlanishi shart"),
+  size: z.string().optional().nullable(),
+  barcode: z.string().optional().nullable(),
+  description: z.string().max(1000, "Tavsif 1000 ta belgidan oshmasligi kerak").optional().nullable(),
+  imageUrl: z.string().optional().nullable(),
 });
+export type CatalogProductInput = z.infer<typeof catalogProductSchema>;
+
+/** A store's product listing — either attaches an existing catalog product or defines a brand-new one (never both). */
+export const productSchema = z
+  .object({
+    catalogProductId: z.string().optional().nullable(),
+    newCatalogProduct: catalogProductSchema.optional().nullable(),
+    sku: z.string().optional().nullable(),
+    price: z.coerce.number().positive("Narx musbat bo'lishi kerak"),
+    costPrice: z.coerce.number().min(0, "Kelgan narx manfiy bo'lishi mumkin emas").optional().nullable(),
+    stock: z.coerce.number().int().min(0, "Qoldiq manfiy bo'lishi mumkin emas"),
+    lowStockThreshold: z.coerce.number().int().min(0, "Chegara manfiy bo'lishi mumkin emas").optional().nullable(),
+    expiryDate: z.string().optional().nullable(),
+    supplier: z.string().optional().nullable(),
+    isPublished: z.coerce.boolean().default(false),
+  })
+  .refine((data) => Boolean(data.catalogProductId) !== Boolean(data.newCatalogProduct), {
+    message: "Mavjud mahsulotni tanlang yoki yangisini yarating",
+    path: ["catalogProductId"],
+  });
 export type ProductInput = z.infer<typeof productSchema>;
+
+export const categorySchema = z.object({
+  name: z.string().min(1, "Nomi kiritilishi shart"),
+  parentId: z.string().optional().nullable(),
+});
+export type CategoryInput = z.infer<typeof categorySchema>;
+
+export const editRequestSchema = z.object({
+  changes: z.record(z.string(), z.unknown()).refine((c) => Object.keys(c).length > 0, "Hech bo'lmaganda bitta maydon o'zgartirilishi kerak"),
+  note: z.string().max(500, "Izoh 500 ta belgidan oshmasligi kerak").optional().nullable(),
+});
+export type EditRequestInput = z.infer<typeof editRequestSchema>;
 
 export const stockReceiptSchema = z.object({
   productId: z.string().min(1, "Mahsulot tanlanishi shart"),

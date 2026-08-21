@@ -13,7 +13,7 @@ import { useCart } from "@/hooks/use-cart";
 import { formatSom } from "@/lib/format";
 import { ONLINE_ORDERING_ENABLED } from "@/lib/config";
 
-type Product = { id: string; name: string; price: string; stock: number; categoryId: string | null; images: string[] };
+type Product = { id: string; name: string; price: string; stock: number; categoryId: string | null; imageUrl: string | null };
 type Category = { id: string; name: string };
 
 export function StorefrontCatalog({
@@ -74,9 +74,9 @@ export function StorefrontCatalog({
             <Card key={product.id}>
               <CardContent className="p-3">
                 <div className="mb-2 aspect-square overflow-hidden rounded-md bg-muted">
-                  {product.images[0] && (
+                  {product.imageUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={product.images[0]} alt={product.name} className="size-full object-cover" />
+                    <img src={product.imageUrl} alt={product.name} className="size-full object-cover" />
                   )}
                 </div>
                 <p className="line-clamp-2 text-sm font-medium">{product.name}</p>

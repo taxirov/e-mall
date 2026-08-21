@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Menu, LayoutDashboard, Package, Users, ClipboardList, ShoppingCart, Store, Settings, LogOut, Warehouse } from "lucide-react";
+import { Menu, LayoutDashboard, Package, Users, ClipboardList, ShoppingCart, Store, Settings, LogOut, Warehouse, Tags, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { DashboardNotifications } from "@/components/dashboard-notifications";
@@ -13,13 +13,19 @@ import { cn } from "@/lib/utils";
 type NavItem = { href: string; label: string; icon: React.ComponentType<{ className?: string }> };
 
 const NAV_ITEMS: Record<string, NavItem[]> = {
-  SUPER_ADMIN: [{ href: "/dashboard/admin", label: "Do'konlar", icon: LayoutDashboard }],
+  SUPER_ADMIN: [
+    { href: "/dashboard/admin", label: "Do'konlar", icon: LayoutDashboard },
+    { href: "/dashboard/admin/categories", label: "Kategoriyalar", icon: Tags },
+    { href: "/dashboard/admin/products", label: "Mahsulotlar", icon: Package },
+    { href: "/dashboard/admin/requests", label: "So'rovlar", icon: Send },
+  ],
   OWNER: [
     { href: "/dashboard/owner", label: "Umumiy ko'rinish", icon: LayoutDashboard },
     { href: "/dashboard/owner/products", label: "Mahsulotlar", icon: Package },
     { href: "/dashboard/owner/warehouse", label: "Ombor", icon: Warehouse },
     { href: "/dashboard/owner/sellers", label: "Sotuvchilar", icon: Users },
     { href: "/dashboard/owner/orders", label: "Buyurtmalar", icon: ClipboardList },
+    { href: "/dashboard/owner/requests", label: "Mening so'rovlarim", icon: Send },
     { href: "/dashboard/pos", label: "POS", icon: ShoppingCart },
     { href: "/dashboard/owner/settings", label: "Sozlamalar", icon: Settings },
   ],

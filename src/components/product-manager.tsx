@@ -3,15 +3,19 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil } from "lucide-react";
+import { Plus, Trash2, Pencil, Send } from "lucide-react";
 import { createProduct, updateProduct, deleteProduct } from "@/actions/products";
+import { updateCatalogProduct, requestProductEdit, type CatalogProductSearchResult } from "@/actions/catalog-products";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { MxikPicker } from "@/components/mxik-picker";
-import type { MxikSearchResult } from "@/actions/mxik";
+import { CatalogProductPicker } from "@/components/catalog-product-picker";
+import { type CategoryTreeNode } from "@/components/category-select";
+import { ImageUpload } from "@/components/image-upload";
+import { CatalogFields } from "@/components/catalog-fields";
 import { formatSom } from "@/lib/format";
 import {
   Dialog,
@@ -25,27 +29,49 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 type Product = {
   id: string;
-  name: string;
   sku: string | null;
   price: string;
+  costPrice: string | null;
   stock: number;
+  lowStockThreshold: number | null;
+  expiryDate: string | null;
   isPublished: boolean;
-  categoryName: string | null;
-  mxikItemId: string | null;
-  mxikCode: string | null;
-  imageUrl: string | null;
+  catalogProduct: {
+    id: string;
+    name: string;
+    brand: string | null;
+    unit: string;
+    size: string | null;
+    barcode: string | null;
+    description: string | null;
+    imageUrl: string | null;
+    categoryId: string;
+    categoryName: string;
+    createdByStoreId: string | null;
+  };
 };
 
-export function ProductManager({ initialProducts }: { initialProducts: Product[] }) {
+export function ProductManager({
+  initialProducts,
+  categories,
+  storeId,
+}: {
+  initialProducts: Product[];
+  categories: CategoryTreeNode[];
+  storeId: string;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
-  const [selectedMxik, setSelectedMxik] = useState<MxikSearchResult | null>(null);
-  const [nameValue, setNameValue] = useState("");
+  const [creatingNew, setCreatingNew] = useState(false);
+  const [selectedCatalog, setSelectedCatalog] = useState<CatalogProductSearchResult | null>(null);
+  const [requestTarget, setRequestTarget] = useState<Product | null>(null);
 
-  function refresh() {
-    router.refresh();
+  function resetDialog() {
+    setEditing(null);
+    setCreatingNew(false);
+    setSelectedCatalog(null);
   }
 
   function handleDeleteProduct(id: string) {
@@ -53,38 +79,104 @@ export function ProductManager({ initialProducts }: { initialProducts: Product[]
       const result = await deleteProduct(id);
       if (result.ok) {
         toast.success("Mahsulot o'chirildi");
-        refresh();
+        router.refresh();
       } else toast.error(result.error);
     });
   }
 
   function handleSubmitProduct(formData: FormData) {
-    const mxikItemId = editing?.mxikItemId ?? selectedMxik?.id;
-    if (!mxikItemId) {
-      toast.error("Mahsulotni katalogdan tanlang");
-      return;
-    }
-
-    const input = {
-      mxikItemId,
-      name: formData.get("name"),
-      sku: formData.get("sku") || null,
+    const operational = {
+      sku: (formData.get("sku") as string) || null,
       price: formData.get("price"),
+      costPrice: formData.get("costPrice") || null,
       stock: formData.get("stock"),
+      lowStockThreshold: formData.get("lowStockThreshold") || null,
+      expiryDate: (formData.get("expiryDate") as string) || null,
+      supplier: (formData.get("supplier") as string) || null,
       isPublished: formData.get("isPublished") === "on",
     };
 
     startTransition(async () => {
-      const result = editing ? await updateProduct(editing.id, input) : await createProduct(input);
+      if (editing) {
+        const isCreator = editing.catalogProduct.createdByStoreId === storeId;
+        if (isCreator) {
+          const catalogInput = {
+            name: formData.get("name"),
+            categoryId: formData.get("categoryId"),
+            brand: (formData.get("brand") as string) || null,
+            unit: formData.get("unit"),
+            size: (formData.get("size") as string) || null,
+            barcode: (formData.get("barcode") as string) || null,
+            description: (formData.get("description") as string) || null,
+            imageUrl: (formData.get("imageUrl") as string) || null,
+          };
+          const catalogResult = await updateCatalogProduct(editing.catalogProduct.id, catalogInput);
+          if (!catalogResult.ok) {
+            toast.error(catalogResult.error);
+            return;
+          }
+        }
+        const result = await updateProduct(editing.id, { catalogProductId: editing.catalogProduct.id, ...operational });
+        if (result.ok) {
+          toast.success("Mahsulot yangilandi");
+          setDialogOpen(false);
+          resetDialog();
+          router.refresh();
+        } else toast.error(result.error);
+        return;
+      }
+
+      let input: Record<string, unknown>;
+      if (selectedCatalog) {
+        input = { catalogProductId: selectedCatalog.id, ...operational };
+      } else if (creatingNew) {
+        input = {
+          newCatalogProduct: {
+            name: formData.get("name"),
+            categoryId: formData.get("categoryId"),
+            brand: (formData.get("brand") as string) || null,
+            unit: formData.get("unit"),
+            size: (formData.get("size") as string) || null,
+            barcode: (formData.get("barcode") as string) || null,
+            description: (formData.get("description") as string) || null,
+            imageUrl: (formData.get("imageUrl") as string) || null,
+          },
+          ...operational,
+        };
+      } else {
+        toast.error("Mahsulotni katalogdan tanlang yoki yangisini yarating");
+        return;
+      }
+
+      const result = await createProduct(input);
       if (result.ok) {
-        toast.success(editing ? "Mahsulot yangilandi" : "Mahsulot qo'shildi");
+        toast.success("Mahsulot qo'shildi");
         setDialogOpen(false);
-        setEditing(null);
-        setSelectedMxik(null);
-        refresh();
+        resetDialog();
+        router.refresh();
       } else toast.error(result.error);
     });
   }
+
+  function handleRequestEdit(formData: FormData) {
+    if (!requestTarget) return;
+    const changes: Record<string, unknown> = {};
+    for (const key of ["name", "brand", "unit", "size", "barcode", "description", "imageUrl"]) {
+      const value = formData.get(key);
+      if (value) changes[key] = value;
+    }
+    const note = (formData.get("note") as string) || undefined;
+
+    startTransition(async () => {
+      const result = await requestProductEdit(requestTarget.catalogProduct.id, { changes, note });
+      if (result.ok) {
+        toast.success("So'rov adminga yuborildi");
+        setRequestTarget(null);
+      } else toast.error(result.error);
+    });
+  }
+
+  const isEditingCreator = editing ? editing.catalogProduct.createdByStoreId === storeId : true;
 
   return (
     <div className="space-y-6">
@@ -94,11 +186,7 @@ export function ProductManager({ initialProducts }: { initialProducts: Product[]
           open={dialogOpen}
           onOpenChange={(open) => {
             setDialogOpen(open);
-            if (!open) {
-              setEditing(null);
-              setSelectedMxik(null);
-              setNameValue("");
-            }
+            if (!open) resetDialog();
           }}
         >
           <DialogTrigger
@@ -106,65 +194,98 @@ export function ProductManager({ initialProducts }: { initialProducts: Product[]
               <Button
                 size="sm"
                 onClick={() => {
-                  setEditing(null);
-                  setSelectedMxik(null);
-                  setNameValue("");
+                  resetDialog();
                 }}
               />
             }
           >
             <Plus className="size-4" /> Mahsulot qo&apos;shish
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editing ? "Mahsulotni tahrirlash" : "Yangi mahsulot"}</DialogTitle>
             </DialogHeader>
             <form action={handleSubmitProduct} className="space-y-4">
               {editing ? (
-                <p className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-                  Katalog: {editing.mxikCode ?? "—"}
-                </p>
+                isEditingCreator ? (
+                  <CatalogFields defaults={editing.catalogProduct} categories={categories} />
+                ) : (
+                  <div className="space-y-1 rounded-md border bg-muted/40 px-3 py-2 text-sm">
+                    <p className="font-medium">{editing.catalogProduct.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {editing.catalogProduct.categoryName} · Boshqa do&apos;kon yaratgan — o&apos;zgartirish uchun so&apos;rov yuboring
+                    </p>
+                  </div>
+                )
+              ) : creatingNew ? (
+                <CatalogFields categories={categories} />
               ) : (
-                <MxikPicker
-                  onSelect={(item) => {
-                    setSelectedMxik(item);
-                    setNameValue(item.mxikName);
-                  }}
+                <CatalogProductPicker
+                  onSelect={(item) => setSelectedCatalog(item)}
+                  onCreateNew={() => setCreatingNew(true)}
                 />
               )}
-              <div className="space-y-2">
-                <Label htmlFor="name">Nomi</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  value={nameValue}
-                  onChange={(e) => setNameValue(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="price">Narxi (so&apos;m)</Label>
-                  <Input id="price" name="price" type="number" step="0.01" min="0" defaultValue={editing?.price} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="stock">Qoldiq</Label>
-                  <Input id="stock" name="stock" type="number" min="0" defaultValue={editing?.stock ?? 0} required />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="sku">SKU (ixtiyoriy)</Label>
-                <Input id="sku" name="sku" defaultValue={editing?.sku ?? ""} />
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch id="isPublished" name="isPublished" defaultChecked={editing?.isPublished} />
-                <Label htmlFor="isPublished">Onlayn vitrinada ko&apos;rsatish</Label>
-              </div>
-              <DialogFooter>
-                <Button type="submit" disabled={pending}>
-                  {editing ? "Saqlash" : "Qo'shish"}
-                </Button>
-              </DialogFooter>
+
+              {(editing || selectedCatalog || creatingNew) && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="price">Sotish narxi (so&apos;m)</Label>
+                      <Input id="price" name="price" type="number" step="0.01" min="0" defaultValue={editing?.price} required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="costPrice">Sotib olingan narx (so&apos;m)</Label>
+                      <Input id="costPrice" name="costPrice" type="number" step="0.01" min="0" defaultValue={editing?.costPrice ?? ""} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="stock">{editing ? "Qoldiq" : "Boshlang'ich miqdor"}</Label>
+                      <Input id="stock" name="stock" type="number" min="0" defaultValue={editing?.stock ?? 0} required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lowStockThreshold">Kam qoldiq chegarasi (ixtiyoriy)</Label>
+                      <Input
+                        id="lowStockThreshold"
+                        name="lowStockThreshold"
+                        type="number"
+                        min="0"
+                        defaultValue={editing?.lowStockThreshold ?? ""}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="expiryDate">Yaroqlilik muddati (ixtiyoriy)</Label>
+                      <Input
+                        id="expiryDate"
+                        name="expiryDate"
+                        type="date"
+                        defaultValue={editing?.expiryDate ? editing.expiryDate.slice(0, 10) : ""}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="sku">SKU (ixtiyoriy)</Label>
+                      <Input id="sku" name="sku" defaultValue={editing?.sku ?? ""} />
+                    </div>
+                  </div>
+                  {!editing && (
+                    <div className="space-y-2">
+                      <Label htmlFor="supplier">Yetkazib beruvchi (ixtiyoriy)</Label>
+                      <Input id="supplier" name="supplier" />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <Switch id="isPublished" name="isPublished" defaultChecked={editing?.isPublished} />
+                    <Label htmlFor="isPublished">Onlayn vitrinada ko&apos;rsatish</Label>
+                  </div>
+                  <DialogFooter>
+                    <Button type="submit" disabled={pending}>
+                      {editing ? "Saqlash" : "Qo'shish"}
+                    </Button>
+                  </DialogFooter>
+                </>
+              )}
             </form>
           </DialogContent>
         </Dialog>
@@ -184,41 +305,58 @@ export function ProductManager({ initialProducts }: { initialProducts: Product[]
             </TableRow>
           </TableHeader>
           <TableBody>
-            {initialProducts.map((p) => (
-              <TableRow key={p.id}>
-                <TableCell>
-                  <div className="size-9 overflow-hidden rounded bg-muted">
-                    {p.imageUrl && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.imageUrl} alt="" className="size-full object-cover" />
+            {initialProducts.map((p) => {
+              const lowStock = p.lowStockThreshold != null && p.stock <= p.lowStockThreshold;
+              return (
+                <TableRow key={p.id}>
+                  <TableCell>
+                    <div className="size-9 overflow-hidden rounded bg-muted">
+                      {p.catalogProduct.imageUrl && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={p.catalogProduct.imageUrl} alt="" className="size-full object-cover" />
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    {p.catalogProduct.name}
+                    {p.catalogProduct.size ? `, ${p.catalogProduct.size}` : ""}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{p.catalogProduct.categoryName}</TableCell>
+                  <TableCell>{formatSom(p.price)} so&apos;m</TableCell>
+                  <TableCell>
+                    {p.stock}
+                    {lowStock && (
+                      <Badge variant="destructive" className="ml-1.5">
+                        Kam
+                      </Badge>
                     )}
-                  </div>
-                </TableCell>
-                <TableCell className="font-medium">{p.name}</TableCell>
-                <TableCell className="text-muted-foreground">{p.categoryName ?? "—"}</TableCell>
-                <TableCell>{formatSom(p.price)} so&apos;m</TableCell>
-                <TableCell>{p.stock}</TableCell>
-                <TableCell>
-                  <Badge variant={p.isPublished ? "default" : "secondary"}>{p.isPublished ? "Ha" : "Yo'q"}</Badge>
-                </TableCell>
-                <TableCell className="flex justify-end gap-1">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => {
-                      setEditing(p);
-                      setNameValue(p.name);
-                      setDialogOpen(true);
-                    }}
-                  >
-                    <Pencil className="size-4" />
-                  </Button>
-                  <Button size="icon" variant="ghost" onClick={() => handleDeleteProduct(p.id)}>
-                    <Trash2 className="size-4" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={p.isPublished ? "default" : "secondary"}>{p.isPublished ? "Ha" : "Yo'q"}</Badge>
+                  </TableCell>
+                  <TableCell className="flex justify-end gap-1">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => {
+                        setEditing(p);
+                        setDialogOpen(true);
+                      }}
+                    >
+                      <Pencil className="size-4" />
+                    </Button>
+                    {p.catalogProduct.createdByStoreId !== storeId && (
+                      <Button size="icon" variant="ghost" onClick={() => setRequestTarget(p)}>
+                        <Send className="size-4" />
+                      </Button>
+                    )}
+                    <Button size="icon" variant="ghost" onClick={() => handleDeleteProduct(p.id)}>
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
             {initialProducts.length === 0 && (
               <TableRow>
                 <TableCell colSpan={7} className="text-center text-muted-foreground">
@@ -229,6 +367,60 @@ export function ProductManager({ initialProducts }: { initialProducts: Product[]
           </TableBody>
         </Table>
       </div>
+
+      <Dialog open={!!requestTarget} onOpenChange={(open) => !open && setRequestTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tahrirlashni so&apos;rash</DialogTitle>
+          </DialogHeader>
+          {requestTarget && (
+            <form action={handleRequestEdit} className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Faqat o&apos;zgartirmoqchi bo&apos;lgan maydonlarni to&apos;ldiring — bo&apos;shlari o&apos;zgarishsiz qoladi. So&apos;rov
+                administratorga yuboriladi.
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="req-name">Nomi</Label>
+                <Input id="req-name" name="name" placeholder={requestTarget.catalogProduct.name} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="req-brand">Brend</Label>
+                  <Input id="req-brand" name="brand" placeholder={requestTarget.catalogProduct.brand ?? ""} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="req-size">Hajmi</Label>
+                  <Input id="req-size" name="size" placeholder={requestTarget.catalogProduct.size ?? ""} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="req-unit">O&apos;lchov birligi</Label>
+                  <Input id="req-unit" name="unit" placeholder={requestTarget.catalogProduct.unit} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="req-barcode">Shtrix-kod</Label>
+                  <Input id="req-barcode" name="barcode" placeholder={requestTarget.catalogProduct.barcode ?? ""} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="req-description">Tavsif</Label>
+                <Textarea id="req-description" name="description" placeholder={requestTarget.catalogProduct.description ?? ""} rows={2} />
+              </div>
+              <ImageUpload label="Yangi rasm (ixtiyoriy)" />
+              <div className="space-y-2">
+                <Label htmlFor="req-note">Izoh (ixtiyoriy)</Label>
+                <Textarea id="req-note" name="note" rows={2} placeholder="Nima uchun o'zgartirish kerakligini yozing" />
+              </div>
+              <DialogFooter>
+                <Button type="submit" disabled={pending}>
+                  So&apos;rov yuborish
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
