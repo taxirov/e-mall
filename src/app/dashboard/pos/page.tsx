@@ -7,7 +7,8 @@ export default async function PosPage() {
   const session = await auth();
   if (!session?.user?.storeId) redirect("/login");
 
-  const store = await prisma.store.findUniqueOrThrow({ where: { id: session.user.storeId } });
+  const store = await prisma.store.findUnique({ where: { id: session.user.storeId } });
+  if (!store) redirect("/login");
 
   const products = await prisma.product.findMany({
     where: { storeId: session.user.storeId, stock: { gt: 0 } },

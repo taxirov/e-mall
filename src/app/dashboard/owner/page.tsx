@@ -17,7 +17,8 @@ export default async function OwnerOverviewPage() {
   if (!session?.user?.storeId) redirect("/login");
   const storeId = session.user.storeId;
 
-  const store = await prisma.store.findUniqueOrThrow({ where: { id: storeId } });
+  const store = await prisma.store.findUnique({ where: { id: storeId } });
+  if (!store) redirect("/login");
 
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
