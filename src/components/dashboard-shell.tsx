@@ -4,10 +4,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Menu, LayoutDashboard, Package, Users, ClipboardList, ShoppingCart, Settings, LogOut, Warehouse, Tags, Send } from "lucide-react";
+import { Menu, LayoutDashboard, Package, Users, ClipboardList, ShoppingCart, Settings, LogOut, Warehouse, Tags, Send, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { DashboardNotifications } from "@/components/dashboard-notifications";
+import { NotificationsProvider } from "@/contexts/notifications-context";
 import { signOutAction } from "@/actions/session";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +20,7 @@ const NAV_ITEMS: Record<string, NavItem[]> = {
     { href: "/dashboard/admin/categories", label: "Kategoriyalar", icon: Tags },
     { href: "/dashboard/admin/products", label: "Mahsulotlar", icon: Package },
     { href: "/dashboard/admin/requests", label: "So'rovlar", icon: Send },
+    { href: "/dashboard/notifications", label: "Bildirishnomalar", icon: Bell },
   ],
   OWNER: [
     { href: "/dashboard/owner", label: "Umumiy ko'rinish", icon: LayoutDashboard },
@@ -28,9 +30,13 @@ const NAV_ITEMS: Record<string, NavItem[]> = {
     { href: "/dashboard/owner/orders", label: "Buyurtmalar", icon: ClipboardList },
     { href: "/dashboard/owner/requests", label: "Mening so'rovlarim", icon: Send },
     { href: "/dashboard/pos", label: "POS", icon: ShoppingCart },
+    { href: "/dashboard/notifications", label: "Bildirishnomalar", icon: Bell },
     { href: "/dashboard/owner/settings", label: "Sozlamalar", icon: Settings },
   ],
-  SELLER: [{ href: "/dashboard/pos", label: "POS", icon: ShoppingCart }],
+  SELLER: [
+    { href: "/dashboard/pos", label: "POS", icon: ShoppingCart },
+    { href: "/dashboard/notifications", label: "Bildirishnomalar", icon: Bell },
+  ],
 };
 
 export function DashboardShell({
@@ -72,51 +78,53 @@ export function DashboardShell({
   );
 
   return (
-    <div className="flex min-h-svh flex-col md:flex-row">
-      <aside className="hidden w-56 shrink-0 border-r bg-muted/20 p-4 md:flex md:flex-col">
-        <div className="mb-6 flex items-center justify-between gap-2">
+    <NotificationsProvider role={role}>
+      <div className="flex min-h-svh flex-col md:flex-row">
+        <aside className="hidden w-56 shrink-0 border-r bg-muted/20 p-4 md:flex md:flex-col">
+          <div className="mb-6 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 font-semibold">
+              <Image src="/logo-96.png" alt="" width={24} height={24} className="rounded-md" priority />
+              e-mall.uz
+            </div>
+            <DashboardNotifications />
+          </div>
+          {storeName && <p className="mb-4 truncate text-xs text-muted-foreground">{storeName}</p>}
+          {nav}
+          <form action={signOutAction} className="mt-auto pt-4">
+            <Button type="submit" variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground">
+              <LogOut className="size-4" />
+              Chiqish
+            </Button>
+          </form>
+        </aside>
+
+        <header className="flex items-center justify-between border-b p-3 md:hidden">
           <div className="flex items-center gap-2 font-semibold">
             <Image src="/logo-96.png" alt="" width={24} height={24} className="rounded-md" priority />
             e-mall.uz
           </div>
-          <DashboardNotifications role={role} />
-        </div>
-        {storeName && <p className="mb-4 truncate text-xs text-muted-foreground">{storeName}</p>}
-        {nav}
-        <form action={signOutAction} className="mt-auto pt-4">
-          <Button type="submit" variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground">
-            <LogOut className="size-4" />
-            Chiqish
-          </Button>
-        </form>
-      </aside>
+          <div className="flex items-center gap-2">
+            <DashboardNotifications />
+            <Sheet open={open} onOpenChange={setOpen}>
+              <SheetTrigger render={<Button variant="outline" size="icon" />}>
+                <Menu className="size-5" />
+              </SheetTrigger>
+              <SheetContent side="left" className="w-64 p-4">
+                <SheetTitle className="mb-4">{storeName ?? userName}</SheetTitle>
+                {nav}
+                <form action={signOutAction} className="mt-4">
+                  <Button type="submit" variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground">
+                    <LogOut className="size-4" />
+                    Chiqish
+                  </Button>
+                </form>
+              </SheetContent>
+            </Sheet>
+          </div>
+        </header>
 
-      <header className="flex items-center justify-between border-b p-3 md:hidden">
-        <div className="flex items-center gap-2 font-semibold">
-          <Image src="/logo-96.png" alt="" width={24} height={24} className="rounded-md" priority />
-          e-mall.uz
-        </div>
-        <div className="flex items-center gap-2">
-          <DashboardNotifications role={role} />
-          <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger render={<Button variant="outline" size="icon" />}>
-              <Menu className="size-5" />
-            </SheetTrigger>
-            <SheetContent side="left" className="w-64 p-4">
-              <SheetTitle className="mb-4">{storeName ?? userName}</SheetTitle>
-              {nav}
-              <form action={signOutAction} className="mt-4">
-                <Button type="submit" variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground">
-                  <LogOut className="size-4" />
-                  Chiqish
-                </Button>
-              </form>
-            </SheetContent>
-          </Sheet>
-        </div>
-      </header>
-
-      <main className="flex-1 p-4 sm:p-6">{children}</main>
-    </div>
+        <main className="flex-1 p-4 sm:p-6">{children}</main>
+      </div>
+    </NotificationsProvider>
   );
 }
