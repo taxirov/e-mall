@@ -53,9 +53,17 @@ export function ImageUpload({
       <input type="hidden" name={name} value={url} />
       <div className="flex items-center gap-3">
         {url ? (
-          <div className="relative size-16 shrink-0 overflow-hidden rounded-md border bg-muted">
+          <div
+            className="relative shrink-0 overflow-hidden rounded-md border bg-muted"
+            style={{ width: 64, height: 64 }}
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={url} alt="" className="size-full object-cover" />
+            <img
+              src={url}
+              alt=""
+              className="object-cover"
+              style={{ width: "100%", height: "100%" }}
+            />
             <button
               type="button"
               onClick={() => setUrl("")}
@@ -65,7 +73,10 @@ export function ImageUpload({
             </button>
           </div>
         ) : (
-          <div className="flex size-16 shrink-0 items-center justify-center rounded-md border border-dashed bg-muted/40 text-muted-foreground">
+          <div
+            className="flex shrink-0 items-center justify-center rounded-md border border-dashed bg-muted/40 text-muted-foreground"
+            style={{ width: 64, height: 64 }}
+          >
             {uploading ? <Loader2 className="size-5 animate-spin" /> : <ImagePlus className="size-5" />}
           </div>
         )}
