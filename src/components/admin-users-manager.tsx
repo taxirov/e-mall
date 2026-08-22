@@ -87,7 +87,7 @@ export function AdminUsersManager({
           <DialogTrigger render={<Button size="sm" />}>
             <Plus className="size-4" /> Foydalanuvchi qo&apos;shish
           </DialogTrigger>
-          <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogContent>
             <DialogHeader>
               <DialogTitle>Yangi foydalanuvchi</DialogTitle>
             </DialogHeader>

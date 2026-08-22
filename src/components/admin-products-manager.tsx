@@ -99,7 +99,7 @@ export function AdminProductsManager({
           <DialogTrigger render={<Button size="sm" onClick={() => setEditing(null)} />}>
             <Plus className="size-4" /> Mahsulot qo&apos;shish
           </DialogTrigger>
-          <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogContent>
             <DialogHeader>
               <DialogTitle>{editing ? "Mahsulotni tahrirlash" : "Yangi mahsulot"}</DialogTitle>
             </DialogHeader>

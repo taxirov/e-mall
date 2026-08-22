@@ -29,7 +29,7 @@ export function CategorySelect({
   const selectedId = children.length > 0 ? childId : parentId;
 
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="space-y-3">
       <div className="space-y-2">
         <Label htmlFor="categoryId-parent">Kategoriya</Label>
         <Select
