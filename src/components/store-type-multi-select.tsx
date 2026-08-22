@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -20,6 +20,19 @@ export function StoreTypeMultiSelect({
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Click-outside (rather than input onBlur) so clicking a checkbox inside
+  // the dropdown — which shifts focus to it — doesn't itself close the list.
+  useEffect(() => {
+    if (!open) return;
+    function handlePointerDown(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [open]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -68,9 +81,6 @@ export function StoreTypeMultiSelect({
             setQuery(e.target.value);
             setOpen(true);
           }}
-          onBlur={(e) => {
-            if (!containerRef.current?.contains(e.relatedTarget as Node)) setOpen(false);
-          }}
           onKeyDown={(e) => {
             if (e.key === "Escape") setOpen(false);
           }}
@@ -85,11 +95,7 @@ export function StoreTypeMultiSelect({
                 key={t.id}
                 className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
               >
-                <Checkbox
-                  checked={selected.includes(t.id)}
-                  onCheckedChange={() => toggle(t.id)}
-                  onMouseDown={(e) => e.preventDefault()}
-                />
+                <Checkbox checked={selected.includes(t.id)} onCheckedChange={() => toggle(t.id)} />
                 {t.name}
               </label>
             ))}
