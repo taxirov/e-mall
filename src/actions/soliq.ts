@@ -42,7 +42,7 @@ export async function lookupBarcode(barcode: unknown): Promise<ActionResult<Soli
   try {
     const res = await fetch(
       `https://tasnif.soliq.uz/api/cls-api/attribute/web-katalog?lang=uz_latn&pageNo=0&pageSize=10&mnnName=&internalCode=${encodeURIComponent(parsed.data)}`,
-      { signal: AbortSignal.timeout(10000) }
+      { signal: AbortSignal.timeout(25000) }
     );
     console.log("[soliq] status", res.status);
     json = await res.json();
