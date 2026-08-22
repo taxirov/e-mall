@@ -1,7 +1,4 @@
-"use server";
-
 import { barcodeSchema } from "@/lib/validations";
-import type { ActionResult } from "./auth";
 
 export type SoliqLookupResult = {
   soliqId: string;
@@ -11,6 +8,8 @@ export type SoliqLookupResult = {
   barcode: string;
   suggestedName: string;
 };
+
+export type SoliqLookupOutcome = { ok: true; data: SoliqLookupResult } | { ok: false; error: string };
 
 type SoliqApiResponse = {
   success: boolean;
@@ -29,12 +28,17 @@ function parseBrandName(raw: string): string {
 }
 
 /**
- * Looks up a product by barcode against Soliq's public MXIK classifier
+ * Looks a barcode up against Soliq's public MXIK classifier
  * (tasnif.soliq.uz), used to pre-fill a new catalog product's brand/MXIK
  * fields instead of typing them by hand. Quantity/size is never sourced from
  * here — the store always enters that manually.
+ *
+ * Called directly from the browser rather than through a server action:
+ * tasnif.soliq.uz's CORS headers allow it, and calling it from the store's
+ * own connection avoids Vercel's serverless IP range, which this API
+ * consistently times out on (likely blocked as datacenter traffic).
  */
-export async function lookupBarcode(barcode: unknown): Promise<ActionResult<SoliqLookupResult>> {
+export async function lookupBarcode(barcode: string): Promise<SoliqLookupOutcome> {
   const parsed = barcodeSchema.safeParse(barcode);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Noto'g'ri shtrix-kod" };
 
@@ -42,12 +46,10 @@ export async function lookupBarcode(barcode: unknown): Promise<ActionResult<Soli
   try {
     const res = await fetch(
       `https://tasnif.soliq.uz/api/cls-api/attribute/web-katalog?lang=uz_latn&pageNo=0&pageSize=10&mnnName=&internalCode=${encodeURIComponent(parsed.data)}`,
-      { signal: AbortSignal.timeout(25000) }
+      { signal: AbortSignal.timeout(10000) }
     );
-    console.log("[soliq] status", res.status);
     json = await res.json();
-  } catch (err) {
-    console.error("[soliq] fetch failed:", err);
+  } catch {
     return { ok: false, error: "Soliq tizimiga ulanib bo'lmadi, birozdan so'ng qayta urinib ko'ring" };
   }
 

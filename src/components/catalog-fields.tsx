@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CategorySelect, type CategoryTreeNode } from "@/components/category-select";
 import { ImageUpload } from "@/components/image-upload";
 import { BarcodeLookup } from "@/components/barcode-lookup";
-import type { SoliqLookupResult } from "@/actions/soliq";
+import type { SoliqLookupResult } from "@/lib/soliq";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UNIT_OPTIONS } from "@/lib/validations";
 

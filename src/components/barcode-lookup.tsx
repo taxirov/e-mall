@@ -5,7 +5,7 @@ import { useTransition } from "react";
 import { ScanLine, Search, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { lookupBarcode, type SoliqLookupResult } from "@/actions/soliq";
+import { lookupBarcode, type SoliqLookupResult } from "@/lib/soliq";
 import { BarcodeScannerDialog } from "@/components/barcode-scanner-dialog";
 
 /**
