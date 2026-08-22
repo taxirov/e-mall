@@ -70,7 +70,7 @@ export function SellerManager({ initialSellers }: { initialSellers: Seller[] }) 
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Telefon raqam</Label>
-                <PhoneInput />
+                <PhoneInput checkAvailability />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Vaqtinchalik parol</Label>

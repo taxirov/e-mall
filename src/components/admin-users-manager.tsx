@@ -9,8 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { PhoneInput } from "@/components/phone-input";
+import { StoreTypeMultiSelect } from "@/components/store-type-multi-select";
 import {
   Dialog,
   DialogContent,
@@ -112,7 +112,7 @@ export function AdminUsersManager({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Telefon raqam</Label>
-                <PhoneInput />
+                <PhoneInput checkAvailability />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Parol</Label>
@@ -127,14 +127,7 @@ export function AdminUsersManager({
                   </div>
                   <div className="space-y-2">
                     <Label>Do&apos;kon turi</Label>
-                    <div className="space-y-2 rounded-md border p-3">
-                      {storeTypes.map((t) => (
-                        <label key={t.id} className="flex items-center gap-2 text-sm">
-                          <Checkbox name="storeTypeIds" value={t.id} />
-                          {t.name}
-                        </label>
-                      ))}
-                    </div>
+                    <StoreTypeMultiSelect storeTypes={storeTypes} />
                   </div>
                 </>
               )}

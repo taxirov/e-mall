@@ -2,7 +2,13 @@
 
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
-import { registerStoreSchema, registerCustomerSchema, phoneSchema } from "@/lib/validations";
+import {
+  registerStoreSchema,
+  registerCustomerSchema,
+  phoneSchema,
+  STORE_NAME_CHARS_REGEX,
+  STORE_NAME_CHARS_HINT,
+} from "@/lib/validations";
 import { slugify, isReservedSlug } from "@/lib/domain";
 import { broadcastToAdmins } from "@/lib/realtime";
 
@@ -18,6 +24,31 @@ export async function checkPhoneAvailable(phone: unknown): Promise<ActionResult>
   const existing = await prisma.user.findUnique({ where: { phone: parsed.data } });
   if (existing) return { ok: false, error: "Bu telefon raqam bilan foydalanuvchi allaqachon ro'yxatdan o'tgan" };
   return { ok: true, data: undefined };
+}
+
+export type NameAvailability =
+  | { status: "available" }
+  | { status: "taken" }
+  | { status: "invalid"; message: string };
+
+/** Live-checked as the store name is typed, ahead of the same slug collision `registerStore` guards against. */
+export async function checkStoreNameAvailable(name: unknown): Promise<NameAvailability> {
+  const trimmed = typeof name === "string" ? name.trim() : "";
+  if (trimmed.length < 2) {
+    return { status: "invalid", message: "Do'kon nomi kamida 2 ta belgidan iborat bo'lishi kerak" };
+  }
+  if (!STORE_NAME_CHARS_REGEX.test(trimmed)) {
+    return { status: "invalid", message: STORE_NAME_CHARS_HINT };
+  }
+
+  const slug = slugify(trimmed);
+  if (!slug || isReservedSlug(slug)) return { status: "taken" };
+
+  const existing = await prisma.store.findFirst({
+    where: { OR: [{ slug }, { name: { equals: trimmed, mode: "insensitive" } }] },
+    select: { id: true },
+  });
+  return existing ? { status: "taken" } : { status: "available" };
 }
 
 export async function registerStore(input: unknown): Promise<ActionResult<{ storeSlug: string }>> {

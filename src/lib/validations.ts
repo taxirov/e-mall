@@ -4,11 +4,19 @@ export const phoneSchema = z
   .string()
   .regex(/^\+998\d{9}$/, "Telefon raqam +998XXXXXXXXX formatida bo'lishi kerak");
 
+/** Letters (any script), digits, spaces, apostrophe variants (o', g'), and hyphens — enough for real store names, not enough for junk like dots/emoji. */
+export const STORE_NAME_CHARS_REGEX = /^[\p{L}\p{N}\s'‘’ʻʼ-]+$/u;
+export const STORE_NAME_CHARS_HINT =
+  "Nomda faqat harflar, raqamlar, bo'sh joy, apostrof (') va tire (-) belgilaridan foydalaning";
+
 export const registerStoreSchema = z.object({
   fullName: z.string().min(2, "Ism kamida 2 ta belgidan iborat bo'lishi kerak"),
   phone: phoneSchema,
   password: z.string().min(6, "Parol kamida 6 ta belgidan iborat bo'lishi kerak"),
-  storeName: z.string().min(2, "Do'kon nomi kamida 2 ta belgidan iborat bo'lishi kerak"),
+  storeName: z
+    .string()
+    .min(2, "Do'kon nomi kamida 2 ta belgidan iborat bo'lishi kerak")
+    .regex(STORE_NAME_CHARS_REGEX, STORE_NAME_CHARS_HINT),
   storeTypeIds: z.array(z.string()).min(1, "Kamida bitta do'kon turi tanlanishi kerak"),
   telegramChatId: z.string().min(1, "Telegram orqali tasdiqlash talab qilinadi"),
   telegramPhone: z.string().optional().nullable(),
@@ -133,7 +141,10 @@ export const createUserAsAdminSchema = z.discriminatedUnion("role", [
   z.object({
     role: z.literal("OWNER"),
     ...baseAdminUserFields,
-    storeName: z.string().min(2, "Do'kon nomi kamida 2 ta belgidan iborat bo'lishi kerak"),
+    storeName: z
+      .string()
+      .min(2, "Do'kon nomi kamida 2 ta belgidan iborat bo'lishi kerak")
+      .regex(STORE_NAME_CHARS_REGEX, STORE_NAME_CHARS_HINT),
     storeTypeIds: z.array(z.string()).min(1, "Kamida bitta do'kon turi tanlanishi kerak"),
   }),
   z.object({
