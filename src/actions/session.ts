@@ -2,19 +2,27 @@
 
 import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { signIn, signOut } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { rootOrigin } from "@/lib/domain";
 import { registerStore, registerCustomer, type ActionResult } from "./auth";
 
 export async function signOutAction() {
   await signOut({ redirectTo: "/login" });
 }
 
-function dashboardPathFor(role?: string) {
+/**
+ * app.e-mall.uz has no landing page of its own (middleware bounces bare "/"
+ * back to /login there), so a CUSTOMER with no callbackUrl is sent to the
+ * root marketing site's store directory instead of into that dead end.
+ */
+async function dashboardPathFor(role?: string) {
   if (role === "SUPER_ADMIN") return "/dashboard/admin";
   if (role === "OWNER") return "/dashboard/owner";
   if (role === "SELLER") return "/dashboard/pos";
-  return "/";
+  const host = (await headers()).get("host") ?? "";
+  return `${rootOrigin(host)}/`;
 }
 
 export async function authenticate(_prevState: string | undefined, formData: FormData) {
@@ -38,7 +46,7 @@ export async function authenticate(_prevState: string | undefined, formData: For
   // same server action invocation.
   const user = await prisma.user.findUnique({ where: { phone }, select: { role: true } });
   const callbackUrl = formData.get("callbackUrl") as string | null;
-  redirect(callbackUrl || dashboardPathFor(user?.role));
+  redirect(callbackUrl || (await dashboardPathFor(user?.role)));
 }
 
 /**
@@ -63,7 +71,7 @@ export async function authenticateWithTelegramCode(code: string): Promise<Action
     throw error;
   }
 
-  return { ok: true, data: { redirectTo: dashboardPathFor(user?.role) } };
+  return { ok: true, data: { redirectTo: await dashboardPathFor(user?.role) } };
 }
 
 async function signInWithCredentials(phone: string, password: string) {
@@ -100,5 +108,6 @@ export async function completeCustomerRegistration(
   if (!result.ok) return result.error;
 
   await signInWithCredentials(input.phone, input.password);
-  redirect(callbackUrl || "/");
+  const host = (await headers()).get("host") ?? "";
+  redirect(callbackUrl || `${rootOrigin(host)}/`);
 }

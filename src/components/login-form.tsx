@@ -29,7 +29,12 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
         setTelegramError(result.error);
         return;
       }
-      router.push(callbackUrl || result.data.redirectTo);
+      const target = callbackUrl || result.data.redirectTo;
+      if (target.startsWith("http")) {
+        window.location.href = target;
+      } else {
+        router.push(target);
+      }
     });
   }
 

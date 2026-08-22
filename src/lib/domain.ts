@@ -55,6 +55,15 @@ export function appOrigin(host: string): string {
   return `https://${APP_DOMAIN}`;
 }
 
+/** Absolute origin for the root marketing site (e-mall.uz), matching the current environment. */
+export function rootOrigin(host: string): string {
+  const [hostname, port] = host.split(":");
+  if (hostname.toLowerCase().endsWith(".localhost") || hostname.toLowerCase() === "localhost") {
+    return `http://localhost${port ? `:${port}` : ""}`;
+  }
+  return `https://${ROOT_DOMAIN}`;
+}
+
 export function slugify(input: string): string {
   return input
     .toLowerCase()
