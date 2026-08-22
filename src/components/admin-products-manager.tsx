@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { createCatalogProductAsAdmin, updateCatalogProduct } from "@/actions/catalog-products";
+import { collectAttributeValues } from "@/lib/collect-attribute-values";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CatalogFields } from "@/components/catalog-fields";
+import { CatalogFields, type ProductAttributeDef } from "@/components/catalog-fields";
 import type { CategoryTreeNode } from "@/components/category-select";
 import {
   Dialog,
@@ -32,14 +33,21 @@ type CatalogProduct = {
   categoryName: string;
   createdByStoreName: string | null;
   storeCount: number;
+  soliqId: string | null;
+  soliqPosition: string | null;
+  soliqBrand: string | null;
+  mxikCode: string | null;
+  attributeValues: Record<string, string>;
 };
 
 export function AdminProductsManager({
   initialProducts,
   categories,
+  attributes,
 }: {
   initialProducts: CatalogProduct[];
   categories: CategoryTreeNode[];
+  attributes: ProductAttributeDef[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -59,6 +67,11 @@ export function AdminProductsManager({
       barcode: (formData.get("barcode") as string) || null,
       description: (formData.get("description") as string) || null,
       imageUrl: (formData.get("imageUrl") as string) || null,
+      soliqId: (formData.get("soliqId") as string) || null,
+      soliqPosition: (formData.get("soliqPosition") as string) || null,
+      soliqBrand: (formData.get("soliqBrand") as string) || null,
+      mxikCode: (formData.get("mxikCode") as string) || null,
+      attributes: collectAttributeValues(formData, attributes),
     };
 
     startTransition(async () => {
@@ -91,7 +104,12 @@ export function AdminProductsManager({
               <DialogTitle>{editing ? "Mahsulotni tahrirlash" : "Yangi mahsulot"}</DialogTitle>
             </DialogHeader>
             <form action={handleSubmit} className="space-y-4">
-              <CatalogFields defaults={editing ?? undefined} categories={categories} />
+              <CatalogFields
+                defaults={editing ?? undefined}
+                categories={categories}
+                attributes={attributes}
+                defaultAttributeValues={editing?.attributeValues}
+              />
               <DialogFooter>
                 <Button type="submit" disabled={pending}>
                   {editing ? "Saqlash" : "Qo'shish"}

@@ -7,6 +7,23 @@ import { catalogProductSchema, editRequestSchema } from "@/lib/validations";
 import { broadcastToAdmins, broadcastToStore } from "@/lib/realtime";
 import type { ActionResult } from "./auth";
 
+/** Persists a catalog product's custom-attribute values (sparse — only entries actually filled in). */
+export async function saveAttributeValues(catalogProductId: string, attributes?: Record<string, string>) {
+  if (!attributes) return;
+  const entries = Object.entries(attributes).filter(([, value]) => value !== "" && value != null);
+  if (entries.length === 0) return;
+
+  await prisma.$transaction(
+    entries.map(([attributeId, value]) =>
+      prisma.catalogProductAttributeValue.upsert({
+        where: { catalogProductId_attributeId: { catalogProductId, attributeId } },
+        create: { catalogProductId, attributeId, value },
+        update: { value },
+      })
+    )
+  );
+}
+
 export type CatalogProductSearchResult = {
   id: string;
   name: string;
@@ -75,7 +92,9 @@ export async function updateCatalogProduct(catalogProductId: string, input: unkn
     return { ok: false, error: "Bu mahsulotni faqat uni yaratgan do'kon yoki administrator tahrirlay oladi" };
   }
 
-  await prisma.catalogProduct.update({ where: { id: catalogProductId }, data: parsed.data });
+  const { attributes, ...catalogData } = parsed.data;
+  await prisma.catalogProduct.update({ where: { id: catalogProductId }, data: catalogData });
+  await saveAttributeValues(catalogProductId, attributes);
   revalidatePath("/dashboard/owner/products");
   revalidatePath("/dashboard/admin/products");
   revalidatePath("/dashboard/pos");
@@ -88,9 +107,11 @@ export async function createCatalogProductAsAdmin(input: unknown): Promise<Actio
   const parsed = catalogProductSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Xatolik" };
 
-  await prisma.catalogProduct.create({
-    data: { ...parsed.data, createdById: session.user.id },
+  const { attributes, ...catalogData } = parsed.data;
+  const created = await prisma.catalogProduct.create({
+    data: { ...catalogData, createdById: session.user.id },
   });
+  await saveAttributeValues(created.id, attributes);
   revalidatePath("/dashboard/admin/products");
   return { ok: true, data: undefined };
 }

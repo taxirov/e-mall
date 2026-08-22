@@ -8,22 +8,26 @@ export default async function ProductsPage() {
   if (!session?.user?.storeId) redirect("/login");
   const storeId = session.user.storeId;
 
-  const [products, categories] = await Promise.all([
+  const [products, categories, attributes] = await Promise.all([
     prisma.product.findMany({
       where: { storeId },
       orderBy: { createdAt: "desc" },
-      include: { catalogProduct: { include: { category: true } } },
+      include: {
+        catalogProduct: { include: { category: true, attributeValues: true } },
+      },
     }),
     prisma.category.findMany({
       where: { storeType: { stores: { some: { id: storeId } } } },
       orderBy: { name: "asc" },
     }),
+    prisma.productAttribute.findMany({ orderBy: { name: "asc" } }),
   ]);
 
   return (
     <ProductManager
       storeId={storeId}
       categories={categories.map((c) => ({ id: c.id, name: c.name, parentId: c.parentId }))}
+      attributes={attributes.map((a) => ({ id: a.id, name: a.name, type: a.type, options: a.options }))}
       initialProducts={products.map((p) => ({
         id: p.id,
         sku: p.sku,
@@ -45,6 +49,13 @@ export default async function ProductsPage() {
           categoryId: p.catalogProduct.categoryId,
           categoryName: p.catalogProduct.category.name,
           createdByStoreId: p.catalogProduct.createdByStoreId,
+          soliqId: p.catalogProduct.soliqId,
+          soliqPosition: p.catalogProduct.soliqPosition,
+          soliqBrand: p.catalogProduct.soliqBrand,
+          mxikCode: p.catalogProduct.mxikCode,
+          attributeValues: Object.fromEntries(
+            p.catalogProduct.attributeValues.map((v) => [v.attributeId, v.value])
+          ),
         },
       }))}
     />

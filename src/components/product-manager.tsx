@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Plus, Trash2, Pencil, Send } from "lucide-react";
 import { createProduct, updateProduct, deleteProduct } from "@/actions/products";
 import { updateCatalogProduct, requestProductEdit, type CatalogProductSearchResult } from "@/actions/catalog-products";
+import { collectAttributeValues } from "@/lib/collect-attribute-values";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { CatalogProductPicker } from "@/components/catalog-product-picker";
 import { type CategoryTreeNode } from "@/components/category-select";
 import { ImageUpload } from "@/components/image-upload";
-import { CatalogFields } from "@/components/catalog-fields";
+import { CatalogFields, type ProductAttributeDef } from "@/components/catalog-fields";
 import { formatSom } from "@/lib/format";
 import {
   Dialog,
@@ -48,6 +49,11 @@ type Product = {
     categoryId: string;
     categoryName: string;
     createdByStoreId: string | null;
+    soliqId: string | null;
+    soliqPosition: string | null;
+    soliqBrand: string | null;
+    mxikCode: string | null;
+    attributeValues: Record<string, string>;
   };
 };
 
@@ -55,10 +61,12 @@ export function ProductManager({
   initialProducts,
   categories,
   storeId,
+  attributes,
 }: {
   initialProducts: Product[];
   categories: CategoryTreeNode[];
   storeId: string;
+  attributes: ProductAttributeDef[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -109,6 +117,11 @@ export function ProductManager({
             barcode: (formData.get("barcode") as string) || null,
             description: (formData.get("description") as string) || null,
             imageUrl: (formData.get("imageUrl") as string) || null,
+            soliqId: (formData.get("soliqId") as string) || null,
+            soliqPosition: (formData.get("soliqPosition") as string) || null,
+            soliqBrand: (formData.get("soliqBrand") as string) || null,
+            mxikCode: (formData.get("mxikCode") as string) || null,
+            attributes: collectAttributeValues(formData, attributes),
           };
           const catalogResult = await updateCatalogProduct(editing.catalogProduct.id, catalogInput);
           if (!catalogResult.ok) {
@@ -140,6 +153,11 @@ export function ProductManager({
             barcode: (formData.get("barcode") as string) || null,
             description: (formData.get("description") as string) || null,
             imageUrl: (formData.get("imageUrl") as string) || null,
+            soliqId: (formData.get("soliqId") as string) || null,
+            soliqPosition: (formData.get("soliqPosition") as string) || null,
+            soliqBrand: (formData.get("soliqBrand") as string) || null,
+            mxikCode: (formData.get("mxikCode") as string) || null,
+            attributes: collectAttributeValues(formData, attributes),
           },
           ...operational,
         };
@@ -208,7 +226,12 @@ export function ProductManager({
             <form action={handleSubmitProduct} className="space-y-4">
               {editing ? (
                 isEditingCreator ? (
-                  <CatalogFields defaults={editing.catalogProduct} categories={categories} />
+                  <CatalogFields
+                    defaults={editing.catalogProduct}
+                    categories={categories}
+                    attributes={attributes}
+                    defaultAttributeValues={editing.catalogProduct.attributeValues}
+                  />
                 ) : (
                   <div className="space-y-1 rounded-md border bg-muted/40 px-3 py-2 text-sm">
                     <p className="font-medium">{editing.catalogProduct.name}</p>
@@ -218,7 +241,7 @@ export function ProductManager({
                   </div>
                 )
               ) : creatingNew ? (
-                <CatalogFields categories={categories} />
+                <CatalogFields categories={categories} attributes={attributes} />
               ) : (
                 <CatalogProductPicker
                   onSelect={(item) => setSelectedCatalog(item)}

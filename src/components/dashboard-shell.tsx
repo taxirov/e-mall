@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Menu, LayoutDashboard, Package, Users, ClipboardList, ShoppingCart, Settings, LogOut, Warehouse, Tags, Send, Bell, Store } from "lucide-react";
+import { Menu, LayoutDashboard, Package, Users, ClipboardList, ShoppingCart, Settings, LogOut, Warehouse, Tags, Send, Bell, Store, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { DashboardNotifications } from "@/components/dashboard-notifications";
@@ -20,6 +20,7 @@ const NAV_ITEMS: Record<string, NavItem[]> = {
     { href: "/dashboard/admin/store-types", label: "Do'kon turlari", icon: Store },
     { href: "/dashboard/admin/categories", label: "Kategoriyalar", icon: Tags },
     { href: "/dashboard/admin/products", label: "Mahsulotlar", icon: Package },
+    { href: "/dashboard/admin/attributes", label: "Mahsulot maydonlari", icon: SlidersHorizontal },
     { href: "/dashboard/admin/requests", label: "So'rovlar", icon: Send },
     { href: "/dashboard/admin/users", label: "Foydalanuvchilar", icon: Users },
     { href: "/dashboard/notifications", label: "Bildirishnomalar", icon: Bell },

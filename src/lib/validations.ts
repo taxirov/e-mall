@@ -60,8 +60,33 @@ export const catalogProductSchema = z.object({
   barcode: z.string().optional().nullable(),
   description: z.string().max(1000, "Tavsif 1000 ta belgidan oshmasligi kerak").optional().nullable(),
   imageUrl: z.string().optional().nullable(),
+  soliqId: z.string().optional().nullable(),
+  soliqPosition: z.string().optional().nullable(),
+  soliqBrand: z.string().optional().nullable(),
+  mxikCode: z.string().optional().nullable(),
+  /** attributeId -> raw string value; sparse, only attributes the user actually filled in. */
+  attributes: z.record(z.string(), z.string()).optional(),
 });
 export type CatalogProductInput = z.infer<typeof catalogProductSchema>;
+
+export const barcodeSchema = z
+  .string()
+  .trim()
+  .regex(/^\d{6,14}$/, "Shtrix-kod 6-14 xonali raqamdan iborat bo'lishi kerak");
+
+export const PRODUCT_ATTRIBUTE_TYPES = ["TEXT", "NUMBER", "BOOLEAN", "SELECT"] as const;
+
+export const productAttributeSchema = z
+  .object({
+    name: z.string().min(1, "Nomi kiritilishi shart"),
+    type: z.enum(PRODUCT_ATTRIBUTE_TYPES),
+    options: z.array(z.string().min(1)).optional().default([]),
+  })
+  .refine((d) => d.type !== "SELECT" || d.options.length > 0, {
+    message: "Tanlov turi uchun kamida bitta variant kerak",
+    path: ["options"],
+  });
+export type ProductAttributeInput = z.infer<typeof productAttributeSchema>;
 
 /** A store's product listing — either attaches an existing catalog product or defines a brand-new one (never both). */
 export const productSchema = z

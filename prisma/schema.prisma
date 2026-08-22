@@ -54,6 +54,13 @@ enum TelegramVerificationType {
   LOGIN
 }
 
+enum ProductAttributeType {
+  TEXT
+  NUMBER
+  BOOLEAN
+  SELECT
+}
+
 model User {
   id                   String               @id @default(cuid())
   phone                String               @unique
@@ -171,18 +178,59 @@ model CatalogProduct {
   barcode         String?
   description     String?
   imageUrl        String?
+  /// The MXIK classifier record's own id, from tasnif.soliq.uz — kept for
+  /// traceability, not shown to end users.
+  soliqId         String?
+  /// Raw "position" string from the MXIK lookup (code + name), e.g.
+  /// "02202002-Salqin alkogolsiz ichimliklar".
+  soliqPosition   String?
+  /// Raw "brand" string from the MXIK lookup (code + name) — `brand` above
+  /// holds the human-friendly parsed version used for display/naming.
+  soliqBrand      String?
+  /// MXIK classification code for this product, from the same lookup.
+  mxikCode        String?
   createdByStoreId String?
   createdByStore  Store?              @relation("CatalogProductCreatedByStore", fields: [createdByStoreId], references: [id])
   createdById     String
   createdBy       User                @relation("CatalogProductCreatedBy", fields: [createdById], references: [id])
   products        Product[]
   editRequests    ProductEditRequest[]
+  attributeValues CatalogProductAttributeValue[]
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
   @@index([categoryId])
   @@index([name])
   @@index([createdByStoreId])
+}
+
+/// Super-Admin-defined custom field a catalog product can carry (e.g. a
+/// "Rangi" text field, a "Vegan" checkbox, a "Hajmi turi" dropdown). Applies
+/// across the whole catalog, not scoped to a category or store type.
+model ProductAttribute {
+  id        String                          @id @default(cuid())
+  name      String                          @unique
+  type      ProductAttributeType
+  /// Only meaningful when type is SELECT — the list of choices offered.
+  options   String[]                        @default([])
+  values    CatalogProductAttributeValue[]
+  createdAt DateTime                        @default(now())
+}
+
+/// One catalog product's value for one ProductAttribute. Stored as a plain
+/// string regardless of the attribute's type ("true"/"false" for BOOLEAN,
+/// numeric text for NUMBER) — parsed back to the right type for display.
+model CatalogProductAttributeValue {
+  id               String           @id @default(cuid())
+  catalogProductId String
+  catalogProduct   CatalogProduct   @relation(fields: [catalogProductId], references: [id], onDelete: Cascade)
+  attributeId      String
+  attribute        ProductAttribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  value            String
+
+  @@unique([catalogProductId, attributeId])
+  @@index([catalogProductId])
+  @@index([attributeId])
 }
 
 /// A store's proposal to change a shared CatalogProduct it did not create.

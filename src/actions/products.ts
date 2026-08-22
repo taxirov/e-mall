@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireStoreMember } from "@/lib/authz";
 import { productSchema } from "@/lib/validations";
 import { broadcastToStore } from "@/lib/realtime";
+import { saveAttributeValues } from "./catalog-products";
 import type { ActionResult } from "./auth";
 
 /**
@@ -23,13 +24,15 @@ export async function createProduct(input: unknown): Promise<ActionResult> {
 
   let catalogProductId = data.catalogProductId ?? undefined;
   if (data.newCatalogProduct) {
+    const { attributes, ...catalogData } = data.newCatalogProduct;
     const created = await prisma.catalogProduct.create({
       data: {
-        ...data.newCatalogProduct,
+        ...catalogData,
         createdByStoreId: storeId,
         createdById: session.user.id,
       },
     });
+    await saveAttributeValues(created.id, attributes);
     catalogProductId = created.id;
   }
   if (!catalogProductId) return { ok: false, error: "Mahsulot tanlanmadi" };
