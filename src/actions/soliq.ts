@@ -44,8 +44,10 @@ export async function lookupBarcode(barcode: unknown): Promise<ActionResult<Soli
       `https://tasnif.soliq.uz/api/cls-api/attribute/web-katalog?lang=uz_latn&pageNo=0&pageSize=10&mnnName=&internalCode=${encodeURIComponent(parsed.data)}`,
       { signal: AbortSignal.timeout(10000) }
     );
+    console.log("[soliq] status", res.status);
     json = await res.json();
-  } catch {
+  } catch (err) {
+    console.error("[soliq] fetch failed:", err);
     return { ok: false, error: "Soliq tizimiga ulanib bo'lmadi, birozdan so'ng qayta urinib ko'ring" };
   }
 
