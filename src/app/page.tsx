@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
-import { ROOT_DOMAIN } from "@/lib/domain";
+import { ROOT_DOMAIN, appOrigin } from "@/lib/domain";
 import {
   Store as StoreIcon,
   ShoppingCart,
@@ -68,6 +69,9 @@ const STEPS = [
 ];
 
 export default async function HomePage() {
+  const host = (await headers()).get("host") ?? "";
+  const appUrl = appOrigin(host);
+
   const stores = await prisma.store.findMany({
     where: { status: "ACTIVE" },
     orderBy: { createdAt: "desc" },
@@ -103,11 +107,11 @@ export default async function HomePage() {
             platformada. Ro&apos;yxatdan o&apos;tish bepul va bir necha daqiqa vaqt oladi.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Button size="lg" className="h-11 gap-2 bg-brand px-6 text-brand-foreground hover:bg-brand/90" render={<Link href="/register" />} nativeButton={false}>
+            <Button size="lg" className="h-11 gap-2 bg-brand px-6 text-brand-foreground hover:bg-brand/90" render={<Link href={`${appUrl}/register`} />} nativeButton={false}>
               Do&apos;kon ochish
               <ArrowRight className="size-4" />
             </Button>
-            <Button size="lg" variant="outline" className="h-11 px-6" render={<Link href="/register-customer" />} nativeButton={false}>
+            <Button size="lg" variant="outline" className="h-11 px-6" render={<Link href={`${appUrl}/register-customer`} />} nativeButton={false}>
               Xaridor sifatida ro&apos;yxatdan o&apos;ting
             </Button>
           </div>
@@ -184,7 +188,7 @@ export default async function HomePage() {
                 <p className="font-medium">Hozircha faol do&apos;konlar yo&apos;q</p>
                 <p className="mt-1 text-sm text-muted-foreground">Birinchi bo&apos;lib do&apos;kon oching va shu yerda ko&apos;ring.</p>
               </div>
-              <Button render={<Link href="/register" />} nativeButton={false}>
+              <Button render={<Link href={`${appUrl}/register`} />} nativeButton={false}>
                 Do&apos;kon ochish
               </Button>
             </div>
@@ -222,7 +226,7 @@ export default async function HomePage() {
           <Button
             size="lg"
             className="h-11 gap-2 bg-background px-6 text-foreground hover:bg-background/90"
-            render={<Link href="/register" />}
+            render={<Link href={`${appUrl}/register`} />}
             nativeButton={false}
           >
             Do&apos;kon ochish
@@ -241,13 +245,13 @@ export default async function HomePage() {
             e-mall.uz
           </div>
           <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
-            <Link href="/register" className="hover:text-foreground">
+            <Link href={`${appUrl}/register`} className="hover:text-foreground">
               Do&apos;kon ochish
             </Link>
-            <Link href="/register-customer" className="hover:text-foreground">
+            <Link href={`${appUrl}/register-customer`} className="hover:text-foreground">
               Xaridor bo&apos;lish
             </Link>
-            <Link href="/login" className="hover:text-foreground">
+            <Link href={`${appUrl}/login`} className="hover:text-foreground">
               Kirish
             </Link>
           </nav>
