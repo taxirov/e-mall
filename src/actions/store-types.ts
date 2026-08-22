@@ -17,6 +17,7 @@ export async function createStoreType(input: unknown): Promise<ActionResult> {
     return { ok: false, error: "Bu nomdagi do'kon turi allaqachon mavjud" };
   }
   revalidatePath("/dashboard/admin/store-types");
+  revalidatePath("/register");
   return { ok: true, data: undefined };
 }
 
@@ -31,6 +32,7 @@ export async function updateStoreType(id: string, input: unknown): Promise<Actio
     return { ok: false, error: "Bu nomdagi do'kon turi allaqachon mavjud" };
   }
   revalidatePath("/dashboard/admin/store-types");
+  revalidatePath("/register");
   return { ok: true, data: undefined };
 }
 
@@ -42,5 +44,6 @@ export async function deleteStoreType(id: string): Promise<ActionResult> {
     return { ok: false, error: "Bu turda kategoriyalar yoki do'konlar bor, shuning uchun o'chirib bo'lmaydi" };
   }
   revalidatePath("/dashboard/admin/store-types");
+  revalidatePath("/register");
   return { ok: true, data: undefined };
 }
