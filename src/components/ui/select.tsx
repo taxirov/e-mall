@@ -6,7 +6,42 @@ import { Select as SelectPrimitive } from "@base-ui/react/select"
 import { cn } from "@/lib/utils"
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
 
-const Select = SelectPrimitive.Root
+// Base UI's <Select.Value> only shows an item's label instead of its raw
+// `value` when an `items` map is passed to <Select.Root> — it doesn't derive
+// one from mounted <Select.Item> children the way Radix used to. Walking the
+// children tree here (pure prop inspection, no rendering) means callers can
+// keep writing plain <SelectItem value="id">Label</SelectItem> and still get
+// the label shown once selected.
+function collectSelectItems(node: React.ReactNode, acc: Record<string, React.ReactNode>) {
+  React.Children.forEach(node, (child) => {
+    if (!React.isValidElement(child)) return
+    const props = child.props as { value?: unknown; children?: React.ReactNode }
+    if (child.type === SelectItem) {
+      if (typeof props.value === "string") acc[props.value] = props.children
+      return
+    }
+    if (props?.children) collectSelectItems(props.children, acc)
+  })
+}
+
+function Select<Value = string, Multiple extends boolean | undefined = false>({
+  children,
+  items,
+  ...props
+}: SelectPrimitive.Root.Props<Value, Multiple>) {
+  const derivedItems = React.useMemo<SelectPrimitive.Root.Props<Value, Multiple>["items"]>(() => {
+    if (items) return items
+    const acc: Record<string, React.ReactNode> = {}
+    collectSelectItems(children, acc)
+    return acc as SelectPrimitive.Root.Props<Value, Multiple>["items"]
+  }, [children, items])
+
+  return (
+    <SelectPrimitive.Root items={derivedItems} {...props}>
+      {children}
+    </SelectPrimitive.Root>
+  )
+}
 
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   return (
