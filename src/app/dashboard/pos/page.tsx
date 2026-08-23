@@ -17,19 +17,26 @@ export default async function PosPage() {
       id: true,
       price: true,
       stock: true,
-      catalogProduct: { select: { name: true, size: true, categoryId: true, imageUrl: true } },
+      catalogProduct: {
+        select: { name: true, size: true, imageUrl: true, category: { select: { id: true, name: true } } },
+      },
     },
   });
+
+  const categories = Array.from(
+    new Map(products.map((p) => [p.catalogProduct.category.id, p.catalogProduct.category.name])).entries()
+  ).map(([id, name]) => ({ id, name }));
 
   return (
     <PosScreen
       storeActive={store.status === "ACTIVE"}
+      categories={categories}
       initialProducts={products.map((p) => ({
         id: p.id,
         name: p.catalogProduct.size ? `${p.catalogProduct.name}, ${p.catalogProduct.size}` : p.catalogProduct.name,
         price: p.price.toString(),
         stock: p.stock,
-        categoryId: p.catalogProduct.categoryId,
+        categoryId: p.catalogProduct.category.id,
         imageUrl: p.catalogProduct.imageUrl,
       }))}
     />

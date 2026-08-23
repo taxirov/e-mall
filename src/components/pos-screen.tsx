@@ -1,28 +1,42 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { ShoppingCart, Plus, Minus, Trash2, Banknote, CreditCard } from "lucide-react";
-import { createSale } from "@/actions/pos";
+import { ShoppingCart, Plus, Minus, Trash2, Banknote, CreditCard, X } from "lucide-react";
+import { createSale, type ReceiptData } from "@/actions/pos";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
+import { ReceiptDialog } from "@/components/receipt-dialog";
 import { cn } from "@/lib/utils";
 import { useRealtime } from "@/hooks/use-realtime";
 import { formatSom } from "@/lib/format";
 
 type Product = { id: string; name: string; price: string; stock: number; categoryId: string | null; imageUrl: string | null };
+type Category = { id: string; name: string };
 type CartLine = { productId: string; name: string; price: number; qty: number; maxStock: number };
+type CartTab = { id: string; label: string; lines: CartLine[]; paymentMethod: "CASH" | "CARD" };
 
-export function PosScreen({ storeActive, initialProducts }: { storeActive: boolean; initialProducts: Product[] }) {
+export function PosScreen({
+  storeActive,
+  categories,
+  initialProducts,
+}: {
+  storeActive: boolean;
+  categories: Category[];
+  initialProducts: Product[];
+}) {
   const [products, setProducts] = useState(initialProducts);
   const [search, setSearch] = useState("");
-  const [cart, setCart] = useState<CartLine[]>([]);
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const tabCounter = useRef(1);
+  const [tabs, setTabs] = useState<CartTab[]>([{ id: "tab-1", label: "Savat 1", lines: [], paymentMethod: "CASH" }]);
+  const [activeTabId, setActiveTabId] = useState("tab-1");
   const [cartOpen, setCartOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD">("CASH");
   const [pending, startTransition] = useTransition();
-  const [lastReceipt, setLastReceipt] = useState<string | null>(null);
+  const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+  const [receiptOpen, setReceiptOpen] = useState(false);
 
   useRealtime((event, payload) => {
     if (event === "stock:update") {
@@ -31,59 +45,104 @@ export function PosScreen({ storeActive, initialProducts }: { storeActive: boole
     }
   });
 
+  const activeTab = tabs.find((t) => t.id === activeTabId) ?? tabs[0];
+
   const filtered = useMemo(
-    () => products.filter((p) => p.name.toLowerCase().includes(search.toLowerCase())),
-    [products, search]
+    () =>
+      products.filter((p) => {
+        const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
+        const matchesCategory = !activeCategory || p.categoryId === activeCategory;
+        return matchesSearch && matchesCategory;
+      }),
+    [products, search, activeCategory]
   );
 
-  const total = cart.reduce((sum, line) => sum + line.price * line.qty, 0);
-  const itemCount = cart.reduce((sum, line) => sum + line.qty, 0);
+  const total = activeTab.lines.reduce((sum, line) => sum + line.price * line.qty, 0);
+  const itemCount = activeTab.lines.reduce((sum, line) => sum + line.qty, 0);
+
+  function updateTab(id: string, updater: (tab: CartTab) => CartTab) {
+    setTabs((prev) => prev.map((t) => (t.id === id ? updater(t) : t)));
+  }
 
   function addToCart(product: Product) {
-    setCart((prev) => {
-      const existing = prev.find((l) => l.productId === product.id);
+    updateTab(activeTab.id, (tab) => {
+      const existing = tab.lines.find((l) => l.productId === product.id);
       if (existing) {
         if (existing.qty >= product.stock) {
           toast.error("Qoldiqdan ortiq qo'shib bo'lmaydi");
-          return prev;
+          return tab;
         }
-        return prev.map((l) => (l.productId === product.id ? { ...l, qty: l.qty + 1 } : l));
+        return { ...tab, lines: tab.lines.map((l) => (l.productId === product.id ? { ...l, qty: l.qty + 1 } : l)) };
       }
-      if (product.stock < 1) return prev;
-      return [...prev, { productId: product.id, name: product.name, price: Number(product.price), qty: 1, maxStock: product.stock }];
+      if (product.stock < 1) return tab;
+      return {
+        ...tab,
+        lines: [...tab.lines, { productId: product.id, name: product.name, price: Number(product.price), qty: 1, maxStock: product.stock }],
+      };
     });
   }
 
   function changeQty(productId: string, delta: number) {
-    setCart((prev) =>
-      prev
+    updateTab(activeTab.id, (tab) => ({
+      ...tab,
+      lines: tab.lines
         .map((l) => (l.productId === productId ? { ...l, qty: Math.min(l.maxStock, Math.max(0, l.qty + delta)) } : l))
-        .filter((l) => l.qty > 0)
-    );
+        .filter((l) => l.qty > 0),
+    }));
   }
 
   function removeLine(productId: string) {
-    setCart((prev) => prev.filter((l) => l.productId !== productId));
+    updateTab(activeTab.id, (tab) => ({ ...tab, lines: tab.lines.filter((l) => l.productId !== productId) }));
+  }
+
+  function setPaymentMethod(method: "CASH" | "CARD") {
+    updateTab(activeTab.id, (tab) => ({ ...tab, paymentMethod: method }));
+  }
+
+  function clearActiveTab() {
+    updateTab(activeTab.id, (tab) => ({ ...tab, lines: [] }));
+  }
+
+  function newTab() {
+    tabCounter.current += 1;
+    const tab: CartTab = { id: `tab-${Date.now()}`, label: `Savat ${tabCounter.current}`, lines: [], paymentMethod: "CASH" };
+    setTabs((prev) => [...prev, tab]);
+    setActiveTabId(tab.id);
+  }
+
+  function closeTab(id: string) {
+    setTabs((prev) => {
+      if (prev.length === 1) return prev.map((t) => (t.id === id ? { ...t, lines: [] } : t));
+      return prev.filter((t) => t.id !== id);
+    });
   }
 
   function checkout() {
-    if (cart.length === 0) return;
+    if (activeTab.lines.length === 0) return;
+    const tabId = activeTab.id;
+    const saleLines = activeTab.lines;
+    const saleMethod = activeTab.paymentMethod;
+
     startTransition(async () => {
       const result = await createSale({
-        items: cart.map((l) => ({ productId: l.productId, qty: l.qty })),
-        paymentMethod,
+        items: saleLines.map((l) => ({ productId: l.productId, qty: l.qty })),
+        paymentMethod: saleMethod,
       });
       if (result.ok) {
         toast.success("Sotuv muvaffaqiyatli yakunlandi");
         setProducts((prev) =>
           prev.map((p) => {
-            const line = cart.find((l) => l.productId === p.id);
+            const line = saleLines.find((l) => l.productId === p.id);
             return line ? { ...p, stock: p.stock - line.qty } : p;
           })
         );
-        setLastReceipt(result.data.receiptNumber);
-        setCart([]);
+        setReceipt(result.data.receipt);
+        setReceiptOpen(true);
         setCartOpen(false);
+        setTabs((prev) => {
+          if (prev.length === 1) return prev.map((t) => (t.id === tabId ? { ...t, lines: [] } : t));
+          return prev.filter((t) => t.id !== tabId);
+        });
       } else {
         toast.error(result.error);
       }
@@ -103,12 +162,36 @@ export function PosScreen({ storeActive, initialProducts }: { storeActive: boole
   return (
     <div className="relative pb-20 md:pb-0 md:flex md:gap-6">
       <div className="md:flex-1">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <h1 className="text-xl font-semibold">POS</h1>
-          {lastReceipt && (
-            <span className="text-xs text-muted-foreground">Oxirgi chek: {lastReceipt}</span>
-          )}
-        </div>
+        <h1 className="mb-4 text-xl font-semibold">POS</h1>
+
+        {categories.length > 0 && (
+          <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+            <button
+              type="button"
+              onClick={() => setActiveCategory(null)}
+              className={cn(
+                "shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+                !activeCategory ? "border-brand bg-brand text-brand-foreground" : "text-muted-foreground hover:bg-muted"
+              )}
+            >
+              Barchasi
+            </button>
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setActiveCategory(cat.id)}
+                className={cn(
+                  "shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+                  activeCategory === cat.id ? "border-brand bg-brand text-brand-foreground" : "text-muted-foreground hover:bg-muted"
+                )}
+              >
+                {cat.name}
+              </button>
+            ))}
+          </div>
+        )}
+
         <Input
           placeholder="Mahsulot qidirish..."
           value={search}
@@ -118,16 +201,20 @@ export function PosScreen({ storeActive, initialProducts }: { storeActive: boole
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {filtered.map((product) => (
             <button key={product.id} type="button" onClick={() => addToCart(product)} className="text-left">
-              <Card className="h-full transition-colors hover:border-primary active:scale-[0.98]">
+              <Card className="h-full overflow-hidden transition-all hover:border-brand hover:shadow-md active:scale-[0.98]">
+                {product.imageUrl ? (
+                  <div className="aspect-square overflow-hidden bg-muted">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={product.imageUrl} alt="" className="size-full object-cover" />
+                  </div>
+                ) : (
+                  <div className="flex aspect-square items-center justify-center bg-muted">
+                    <ShoppingCart className="size-6 text-muted-foreground" />
+                  </div>
+                )}
                 <CardContent className="p-3">
-                  {product.imageUrl && (
-                    <div className="mb-2 aspect-square overflow-hidden rounded bg-muted">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={product.imageUrl} alt="" className="size-full object-cover" />
-                    </div>
-                  )}
                   <p className="line-clamp-2 text-sm font-medium">{product.name}</p>
-                  <p className="mt-1 text-sm font-semibold">{formatSom(product.price)} so&apos;m</p>
+                  <p className="mt-1 text-sm font-semibold text-brand">{formatSom(product.price)} so&apos;m</p>
                   <p className="text-xs text-muted-foreground">Qoldiq: {product.stock}</p>
                 </CardContent>
               </Card>
@@ -139,26 +226,32 @@ export function PosScreen({ storeActive, initialProducts }: { storeActive: boole
         </div>
       </div>
 
-      {/* Desktop cart panel */}
+      {/* Desktop billing panel */}
       <div className="hidden w-80 shrink-0 md:block">
-        <CartPanel
-          cart={cart}
-          total={total}
-          paymentMethod={paymentMethod}
-          setPaymentMethod={setPaymentMethod}
-          changeQty={changeQty}
-          removeLine={removeLine}
-          checkout={checkout}
-          pending={pending}
-        />
+        <Card className="p-4">
+          <CartPanel
+            tabs={tabs}
+            activeTab={activeTab}
+            setActiveTabId={setActiveTabId}
+            newTab={newTab}
+            closeTab={closeTab}
+            total={total}
+            changeQty={changeQty}
+            removeLine={removeLine}
+            setPaymentMethod={setPaymentMethod}
+            checkout={checkout}
+            clearActiveTab={clearActiveTab}
+            pending={pending}
+          />
+        </Card>
       </div>
 
       {/* Mobile floating cart button */}
-      {cart.length > 0 && (
+      {itemCount > 0 && (
         <button
           type="button"
           onClick={() => setCartOpen(true)}
-          className="fixed inset-x-4 bottom-4 z-30 flex items-center justify-between rounded-lg bg-primary px-4 py-3 text-primary-foreground shadow-lg md:hidden"
+          className="fixed inset-x-4 bottom-4 z-30 flex items-center justify-between rounded-lg bg-brand px-4 py-3 text-brand-foreground shadow-lg md:hidden"
         >
           <span className="flex items-center gap-2 font-medium">
             <ShoppingCart className="size-5" />
@@ -175,47 +268,94 @@ export function PosScreen({ storeActive, initialProducts }: { storeActive: boole
           </SheetHeader>
           <div className="px-4">
             <CartPanel
-              cart={cart}
+              tabs={tabs}
+              activeTab={activeTab}
+              setActiveTabId={setActiveTabId}
+              newTab={newTab}
+              closeTab={closeTab}
               total={total}
-              paymentMethod={paymentMethod}
-              setPaymentMethod={setPaymentMethod}
               changeQty={changeQty}
               removeLine={removeLine}
+              setPaymentMethod={setPaymentMethod}
               checkout={checkout}
+              clearActiveTab={clearActiveTab}
               pending={pending}
             />
           </div>
           <SheetFooter />
         </SheetContent>
       </Sheet>
+
+      <ReceiptDialog receipt={receipt} open={receiptOpen} onOpenChange={setReceiptOpen} />
     </div>
   );
 }
 
 function CartPanel({
-  cart,
+  tabs,
+  activeTab,
+  setActiveTabId,
+  newTab,
+  closeTab,
   total,
-  paymentMethod,
-  setPaymentMethod,
   changeQty,
   removeLine,
+  setPaymentMethod,
   checkout,
+  clearActiveTab,
   pending,
 }: {
-  cart: CartLine[];
+  tabs: CartTab[];
+  activeTab: CartTab;
+  setActiveTabId: (id: string) => void;
+  newTab: () => void;
+  closeTab: (id: string) => void;
   total: number;
-  paymentMethod: "CASH" | "CARD";
-  setPaymentMethod: (m: "CASH" | "CARD") => void;
   changeQty: (id: string, delta: number) => void;
   removeLine: (id: string) => void;
+  setPaymentMethod: (m: "CASH" | "CARD") => void;
   checkout: () => void;
+  clearActiveTab: () => void;
   pending: boolean;
 }) {
   return (
     <div className="space-y-4">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+        {tabs.map((tab) => {
+          const isActive = tab.id === activeTab.id;
+          const count = tab.lines.reduce((sum, l) => sum + l.qty, 0);
+          return (
+            <div
+              key={tab.id}
+              className={cn(
+                "flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium",
+                isActive ? "border-brand bg-brand/10 text-brand" : "text-muted-foreground"
+              )}
+            >
+              <button type="button" onClick={() => setActiveTabId(tab.id)} className="flex items-center gap-1">
+                {tab.label}
+                {count > 0 && <span className="rounded-full bg-current/10 px-1.5">{count}</span>}
+              </button>
+              {tabs.length > 1 && (
+                <button type="button" onClick={() => closeTab(tab.id)} aria-label={`${tab.label} savatini yopish`}>
+                  <X className="size-3" />
+                </button>
+              )}
+            </div>
+          );
+        })}
+        <button
+          type="button"
+          onClick={newTab}
+          className="flex shrink-0 items-center gap-1 rounded-full border border-dashed px-2.5 py-1 text-xs font-medium text-muted-foreground hover:border-brand hover:text-brand"
+        >
+          <Plus className="size-3" /> Yangi savat
+        </button>
+      </div>
+
       <div className="space-y-2">
-        {cart.length === 0 && <p className="text-sm text-muted-foreground">Savat bo&apos;sh</p>}
-        {cart.map((line) => (
+        {activeTab.lines.length === 0 && <p className="text-sm text-muted-foreground">Savat bo&apos;sh</p>}
+        {activeTab.lines.map((line) => (
           <div key={line.productId} className="flex items-center justify-between gap-2 border-b pb-2">
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">{line.name}</p>
@@ -243,7 +383,7 @@ function CartPanel({
           onClick={() => setPaymentMethod("CASH")}
           className={cn(
             "flex flex-1 items-center justify-center gap-2 rounded-md border py-2 text-sm",
-            paymentMethod === "CASH" ? "border-primary bg-primary/10 font-medium" : "text-muted-foreground"
+            activeTab.paymentMethod === "CASH" ? "border-brand bg-brand/10 font-medium text-brand" : "text-muted-foreground"
           )}
         >
           <Banknote className="size-4" /> Naqd
@@ -253,7 +393,7 @@ function CartPanel({
           onClick={() => setPaymentMethod("CARD")}
           className={cn(
             "flex flex-1 items-center justify-center gap-2 rounded-md border py-2 text-sm",
-            paymentMethod === "CARD" ? "border-primary bg-primary/10 font-medium" : "text-muted-foreground"
+            activeTab.paymentMethod === "CARD" ? "border-brand bg-brand/10 font-medium text-brand" : "text-muted-foreground"
           )}
         >
           <CreditCard className="size-4" /> Karta
@@ -265,9 +405,23 @@ function CartPanel({
         <span>{formatSom(total)} so&apos;m</span>
       </div>
 
-      <Button className="w-full" size="lg" disabled={cart.length === 0 || pending} onClick={checkout}>
-        {pending ? "Yakunlanmoqda..." : "Sotuvni yakunlash"}
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          className="flex-1 border-destructive/30 text-destructive hover:bg-destructive/10"
+          disabled={activeTab.lines.length === 0 || pending}
+          onClick={clearActiveTab}
+        >
+          Bekor qilish
+        </Button>
+        <Button
+          className="flex-1 bg-brand text-brand-foreground hover:bg-brand/90"
+          disabled={activeTab.lines.length === 0 || pending}
+          onClick={checkout}
+        >
+          {pending ? "Yakunlanmoqda..." : "Sotuvni yakunlash"}
+        </Button>
+      </div>
     </div>
   );
 }

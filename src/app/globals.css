@@ -137,3 +137,20 @@
     @apply font-sans;
   }
 }
+
+/* Isolates the POS receipt when printing/saving as PDF — hides everything
+   else regardless of where the dialog portal mounted it in the DOM. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #pos-receipt,
+  #pos-receipt * {
+    visibility: visible;
+  }
+  #pos-receipt {
+    position: fixed;
+    inset: 0;
+    max-width: 100%;
+  }
+}

@@ -7,17 +7,31 @@ import { saleSchema } from "@/lib/validations";
 import { broadcastToStore } from "@/lib/realtime";
 import type { ActionResult } from "./auth";
 
-export async function createSale(input: unknown): Promise<ActionResult<{ saleId: string; receiptNumber: string }>> {
+export type ReceiptData = {
+  receiptNumber: string;
+  storeName: string;
+  cashierName: string;
+  createdAt: string;
+  paymentMethod: "CASH" | "CARD";
+  items: { name: string; qty: number; price: number }[];
+  total: number;
+};
+
+export async function createSale(
+  input: unknown
+): Promise<ActionResult<{ saleId: string; receiptNumber: string; receipt: ReceiptData }>> {
   const { session, storeId } = await requireStoreMember();
   const parsed = saleSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Xatolik" };
   const { items, paymentMethod } = parsed.data;
 
-  const productIds = items.map((i) => i.productId);
-  const products = await prisma.product.findMany({
-    where: { id: { in: productIds }, storeId },
-    include: { catalogProduct: { select: { name: true } } },
-  });
+  const [products, store] = await Promise.all([
+    prisma.product.findMany({
+      where: { id: { in: items.map((i) => i.productId) }, storeId },
+      include: { catalogProduct: { select: { name: true } } },
+    }),
+    prisma.store.findUniqueOrThrow({ where: { id: storeId }, select: { name: true } }),
+  ]);
   const productMap = new Map(products.map((p) => [p.id, p]));
 
   for (const item of items) {
@@ -79,5 +93,19 @@ export async function createSale(input: unknown): Promise<ActionResult<{ saleId:
   revalidatePath("/dashboard/owner");
   revalidatePath("/dashboard/pos");
 
-  return { ok: true, data: { saleId: sale.id, receiptNumber: sale.receiptNumber } };
+  const receipt: ReceiptData = {
+    receiptNumber: sale.receiptNumber,
+    storeName: store.name,
+    cashierName: session.user.name ?? "",
+    createdAt: sale.createdAt.toISOString(),
+    paymentMethod,
+    items: items.map((item) => ({
+      name: productMap.get(item.productId)!.catalogProduct.name,
+      qty: item.qty,
+      price: Number(productMap.get(item.productId)!.price),
+    })),
+    total,
+  };
+
+  return { ok: true, data: { saleId: sale.id, receiptNumber: sale.receiptNumber, receipt } };
 }
