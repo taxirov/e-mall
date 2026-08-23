@@ -111,13 +111,14 @@ export function StoreSettingsForm({
           <CardContent className="space-y-4">
             <div className="space-y-1.5">
               <ImageUpload name="logoUrl" defaultUrl={initialLogoUrl} label="Avatar (logotip)" />
-              <p className="text-xs text-muted-foreground">Tavsiya etilgan o&apos;lcham: 400×400px (kvadrat rasm).</p>
+              <p className="text-xs text-muted-foreground">Tavsiya etilgan o&apos;lcham: 400×400px (kvadrat rasm), hajmi 5 MB gacha.</p>
             </div>
             <div className="space-y-1.5">
               <ImageUpload name="bannerUrl" defaultUrl={initialBannerUrl} label="Banner rasm" />
               <p className="text-xs text-muted-foreground">
-                Tavsiya etilgan o&apos;lcham: 1600×400px (kenglik balandlikdan 4 baravar katta). Rasm sahifa kengligiga
-                moslab kesiladi, shuning uchun asosiy qism (matn, logotip) markazda joylashgani ma&apos;qul.
+                Tavsiya etilgan o&apos;lcham: 1600×400px (kenglik balandlikdan 4 baravar katta), hajmi 5 MB gacha. Rasm
+                sahifa kengligiga moslab kesiladi, shuning uchun asosiy qism (matn, logotip) markazda joylashgani
+                ma&apos;qul.
               </p>
             </div>
             <div className="space-y-2">

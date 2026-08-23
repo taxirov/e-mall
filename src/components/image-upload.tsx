@@ -13,10 +13,13 @@ export function ImageUpload({
   name = "imageUrl",
   defaultUrl,
   label = "Rasm (ixtiyoriy)",
+  maxSizeMB = 5,
 }: {
   name?: string;
   defaultUrl?: string | null;
   label?: string;
+  /** Rejected client-side before upload — keeps oversized phone-camera photos off Cloudinary entirely. */
+  maxSizeMB?: number;
 }) {
   const [url, setUrl] = useState(defaultUrl ?? "");
   const [uploading, setUploading] = useState(false);
@@ -25,6 +28,10 @@ export function ImageUpload({
   async function handleFile(file: File) {
     if (!CLOUD_NAME || !UPLOAD_PRESET) {
       setError("Rasm yuklash sozlanmagan");
+      return;
+    }
+    if (file.size > maxSizeMB * 1024 * 1024) {
+      setError(`Rasm hajmi ${maxSizeMB} MB dan oshmasligi kerak`);
       return;
     }
     setUploading(true);
