@@ -68,8 +68,8 @@ export function DashboardShell({
             href={item.href}
             onClick={() => setOpen(false)}
             className={cn(
-              "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-              active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              "flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+              active ? "bg-brand text-brand-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
           >
             <Icon className="size-4" />
