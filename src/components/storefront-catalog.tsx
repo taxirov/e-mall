@@ -2,11 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ShoppingCart, Plus, Minus, Trash2, PackageSearch } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, PackageSearch, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/hooks/use-cart";
@@ -43,21 +42,44 @@ export function StorefrontCatalog({
   return (
     <div className="pb-24">
       {!ONLINE_ORDERING_ENABLED && (
-        <div className="mb-4 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+        <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
           Hozircha faqat mahsulotlarni ko&apos;rish mumkin — onlayn buyurtma tez orada ishga tushadi.
         </div>
       )}
 
-      <Input placeholder="Mahsulot qidirish..." value={search} onChange={(e) => setSearch(e.target.value)} className="mb-3" />
+      <div className="relative mb-3">
+        <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Mahsulot qidirish..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-8"
+        />
+      </div>
 
       {categories.length > 0 && (
-        <div className="mb-4 flex flex-wrap gap-2">
-          <button onClick={() => setActiveCategory(null)}>
-            <Badge variant={activeCategory === null ? "default" : "secondary"}>Barchasi</Badge>
+        <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+          <button
+            type="button"
+            onClick={() => setActiveCategory(null)}
+            className={cn(
+              "shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+              !activeCategory ? "border-brand bg-brand text-brand-foreground" : "text-muted-foreground hover:bg-muted"
+            )}
+          >
+            Barchasi
           </button>
           {categories.map((c) => (
-            <button key={c.id} onClick={() => setActiveCategory(c.id)}>
-              <Badge variant={activeCategory === c.id ? "default" : "secondary"}>{c.name}</Badge>
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => setActiveCategory(c.id)}
+              className={cn(
+                "shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+                activeCategory === c.id ? "border-brand bg-brand text-brand-foreground" : "text-muted-foreground hover:bg-muted"
+              )}
+            >
+              {c.name}
             </button>
           ))}
         </div>
@@ -71,21 +93,25 @@ export function StorefrontCatalog({
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
           {filtered.map((product) => (
-            <Card key={product.id}>
+            <Card key={product.id} className="overflow-hidden transition-shadow hover:shadow-md">
+              <div className="aspect-square overflow-hidden bg-muted">
+                {product.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={product.imageUrl} alt={product.name} className="size-full object-cover" />
+                ) : (
+                  <div className="flex size-full items-center justify-center">
+                    <PackageSearch className="size-6 text-muted-foreground" />
+                  </div>
+                )}
+              </div>
               <CardContent className="p-3">
-                <div className="mb-2 aspect-square overflow-hidden rounded-md bg-muted">
-                  {product.imageUrl && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={product.imageUrl} alt={product.name} className="size-full object-cover" />
-                  )}
-                </div>
                 <p className="line-clamp-2 text-sm font-medium">{product.name}</p>
-                <p className="mt-1 text-sm font-semibold">{formatSom(product.price)} so&apos;m</p>
+                <p className="mt-1 text-sm font-semibold text-brand">{formatSom(product.price)} so&apos;m</p>
                 <p className="text-xs text-muted-foreground">Qoldiq: {product.stock}</p>
                 {ONLINE_ORDERING_ENABLED && (
                   <Button
                     size="sm"
-                    className="mt-2 w-full"
+                    className="mt-2 w-full bg-brand text-brand-foreground hover:bg-brand/90"
                     onClick={() =>
                       addToCart({ id: product.id, name: product.name, price: Number(product.price), stock: product.stock })
                     }
@@ -105,7 +131,7 @@ export function StorefrontCatalog({
             <button
               type="button"
               onClick={() => setCartOpen(true)}
-              className="fixed inset-x-4 bottom-4 z-30 flex items-center justify-between rounded-lg bg-primary px-4 py-3 text-primary-foreground shadow-lg"
+              className="fixed inset-x-4 bottom-4 z-30 flex items-center justify-between rounded-lg bg-brand px-4 py-3 text-brand-foreground shadow-lg"
             >
               <span className="flex items-center gap-2 font-medium">
                 <ShoppingCart className="size-5" />
@@ -151,7 +177,10 @@ export function StorefrontCatalog({
                   render={<Link href="/checkout" />}
                   nativeButton={false}
                   size="lg"
-                  className={cn("w-full", cart.length === 0 && "pointer-events-none opacity-50")}
+                  className={cn(
+                    "w-full bg-brand text-brand-foreground hover:bg-brand/90",
+                    cart.length === 0 && "pointer-events-none opacity-50"
+                  )}
                 >
                   Buyurtmani rasmiylashtirish
                 </Button>
