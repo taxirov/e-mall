@@ -188,10 +188,30 @@ export const slugSchema = z
   .max(40, "Subdomen 40 ta belgidan oshmasligi kerak")
   .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Subdomen faqat kichik lotin harflari, raqam va tire (-) dan iborat bo'lishi mumkin");
 
+const optionalUrl = z
+  .string()
+  .optional()
+  .nullable()
+  .refine((v) => !v || /^https?:\/\//i.test(v), "Havola https:// bilan boshlanishi kerak");
+
+const optionalPhone = z
+  .string()
+  .optional()
+  .nullable()
+  .refine((v) => !v || /^\+998\d{9}$/.test(v), "Telefon raqam +998XXXXXXXXX formatida bo'lishi kerak");
+
 export const updateStoreSettingsSchema = z.object({
   name: z.string().min(2, "Do'kon nomi kamida 2 ta belgidan iborat bo'lishi kerak"),
   description: z.string().max(500, "Tavsif 500 ta belgidan oshmasligi kerak").optional().nullable(),
   slug: slugSchema,
+  logoUrl: optionalUrl,
+  bannerUrl: optionalUrl,
+  address: z.string().max(300, "Manzil 300 ta belgidan oshmasligi kerak").optional().nullable(),
+  locationUrl: optionalUrl,
+  workingHours: z.string().max(200, "Ish vaqti 200 ta belgidan oshmasligi kerak").optional().nullable(),
+  contactPhone: optionalPhone,
+  instagramUrl: optionalUrl,
+  telegramUrl: optionalUrl,
 });
 export type UpdateStoreSettingsInput = z.infer<typeof updateStoreSettingsSchema>;
 

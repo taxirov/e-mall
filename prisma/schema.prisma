@@ -95,6 +95,13 @@ model Store {
   slug                 String               @unique
   description          String?
   logoUrl              String?
+  bannerUrl            String?
+  address              String?
+  locationUrl          String?
+  workingHours         String?
+  contactPhone         String?
+  instagramUrl         String?
+  telegramUrl          String?
   status               StoreStatus          @default(PENDING)
   ownerId              String               @unique
   owner                User                 @relation("StoreOwner", fields: [ownerId], references: [id])
