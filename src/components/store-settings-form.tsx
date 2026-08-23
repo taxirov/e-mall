@@ -109,8 +109,17 @@ export function StoreSettingsForm({
             <CardDescription>Bu ma&apos;lumotlar do&apos;koningiz sahifasida mijozlarga ko&apos;rinadi</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <ImageUpload name="logoUrl" defaultUrl={initialLogoUrl} label="Avatar (logotip)" />
-            <ImageUpload name="bannerUrl" defaultUrl={initialBannerUrl} label="Banner rasm" />
+            <div className="space-y-1.5">
+              <ImageUpload name="logoUrl" defaultUrl={initialLogoUrl} label="Avatar (logotip)" />
+              <p className="text-xs text-muted-foreground">Tavsiya etilgan o&apos;lcham: 400×400px (kvadrat rasm).</p>
+            </div>
+            <div className="space-y-1.5">
+              <ImageUpload name="bannerUrl" defaultUrl={initialBannerUrl} label="Banner rasm" />
+              <p className="text-xs text-muted-foreground">
+                Tavsiya etilgan o&apos;lcham: 1600×400px (kenglik balandlikdan 4 baravar katta). Rasm sahifa kengligiga
+                moslab kesiladi, shuning uchun asosiy qism (matn, logotip) markazda joylashgani ma&apos;qul.
+              </p>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="address">Manzil</Label>
               <Textarea id="address" name="address" defaultValue={initialAddress} placeholder="Shahar, ko'cha, uy raqami" />
