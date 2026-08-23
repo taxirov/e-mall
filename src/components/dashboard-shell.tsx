@@ -84,7 +84,7 @@ export function DashboardShell({
   return (
     <NotificationsProvider role={role}>
       <div className="flex min-h-svh flex-col md:flex-row">
-        <aside className="hidden w-56 shrink-0 border-r bg-muted/20 p-4 md:flex md:flex-col">
+        <aside className="hidden w-56 shrink-0 border-r bg-muted/20 p-4 md:sticky md:top-0 md:flex md:h-svh md:flex-col">
           <div className="mb-6 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 font-semibold">
               <Image src="/logo-96.png" alt="" width={24} height={24} className="rounded-md" priority />
