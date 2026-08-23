@@ -15,6 +15,14 @@ export default async function StoreSettingsPage() {
       initialName={store.name}
       initialDescription={store.description ?? ""}
       initialSlug={store.slug}
+      initialLogoUrl={store.logoUrl}
+      initialBannerUrl={store.bannerUrl}
+      initialAddress={store.address ?? ""}
+      initialLocationUrl={store.locationUrl ?? ""}
+      initialWorkingHours={store.workingHours ?? ""}
+      initialContactPhone={store.contactPhone}
+      initialInstagramUrl={store.instagramUrl ?? ""}
+      initialTelegramUrl={store.telegramUrl ?? ""}
     />
   );
 }

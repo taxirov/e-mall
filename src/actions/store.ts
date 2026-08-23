@@ -14,7 +14,19 @@ export async function updateStoreSettings(input: unknown): Promise<ActionResult<
 
   const parsed = updateStoreSettingsSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Xatolik" };
-  const { name, description, slug } = parsed.data;
+  const {
+    name,
+    description,
+    slug,
+    logoUrl,
+    bannerUrl,
+    address,
+    locationUrl,
+    workingHours,
+    contactPhone,
+    instagramUrl,
+    telegramUrl,
+  } = parsed.data;
 
   if (isReservedSlug(slug)) {
     return { ok: false, error: "Bu subdomen band, boshqasini tanlang" };
@@ -27,10 +39,23 @@ export async function updateStoreSettings(input: unknown): Promise<ActionResult<
 
   await prisma.store.update({
     where: { id: storeId },
-    data: { name, description: description || null, slug },
+    data: {
+      name,
+      description: description || null,
+      slug,
+      logoUrl: logoUrl || null,
+      bannerUrl: bannerUrl || null,
+      address: address || null,
+      locationUrl: locationUrl || null,
+      workingHours: workingHours || null,
+      contactPhone: contactPhone || null,
+      instagramUrl: instagramUrl || null,
+      telegramUrl: telegramUrl || null,
+    },
   });
 
   revalidatePath("/dashboard/owner");
   revalidatePath("/dashboard/owner/settings");
+  revalidatePath("/store/[slug]", "layout");
   return { ok: true, data: { slug } };
 }
