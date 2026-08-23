@@ -13,7 +13,14 @@ import { BarcodeScannerDialog } from "@/components/barcode-scanner-dialog";
  * hands the result to the parent to pre-fill the rest of the catalog-product
  * form. Purely a lookup helper — nothing here is submitted with the form.
  */
-export function BarcodeLookup({ onFound }: { onFound: (result: SoliqLookupResult) => void }) {
+export function BarcodeLookup({
+  onFound,
+  onNotFound,
+}: {
+  onFound: (result: SoliqLookupResult) => void;
+  /** Called when the barcode is well-formed but Soliq has no record for it — still worth keeping so it lands on the product. */
+  onNotFound?: (barcode: string) => void;
+}) {
   const [code, setCode] = useState("");
   const [scannerOpen, setScannerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +34,7 @@ export function BarcodeLookup({ onFound }: { onFound: (result: SoliqLookupResult
         onFound(result.data);
       } else {
         setError(result.error);
+        if (result.reason === "not-found") onNotFound?.(barcode);
       }
     });
   }

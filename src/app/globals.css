@@ -138,17 +138,18 @@
   }
 }
 
-/* Isolates the POS receipt when printing/saving as PDF — hides everything
-   else regardless of where the dialog portal mounted it in the DOM. */
+/* Isolates whatever's marked as the print target (POS receipt, barcode
+   label, ...) — hides everything else regardless of where the dialog
+   portal mounted it in the DOM. */
 @media print {
   body * {
     visibility: hidden;
   }
-  #pos-receipt,
-  #pos-receipt * {
+  [data-print-target],
+  [data-print-target] * {
     visibility: visible;
   }
-  #pos-receipt {
+  [data-print-target] {
     position: fixed;
     inset: 0;
     max-width: 100%;

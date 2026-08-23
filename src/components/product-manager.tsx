@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, Send } from "lucide-react";
+import { Plus, Trash2, Pencil, Send, Barcode } from "lucide-react";
 import { createProduct, updateProduct, deleteProduct } from "@/actions/products";
 import { updateCatalogProduct, requestProductEdit, type CatalogProductSearchResult } from "@/actions/catalog-products";
 import { collectAttributeValues } from "@/lib/collect-attribute-values";
@@ -17,6 +17,7 @@ import { CatalogProductPicker } from "@/components/catalog-product-picker";
 import { type CategoryTreeNode } from "@/components/category-select";
 import { ImageUpload } from "@/components/image-upload";
 import { CatalogFields, type ProductAttributeDef } from "@/components/catalog-fields";
+import { BarcodeLabelDialog } from "@/components/barcode-label-dialog";
 import { formatSom } from "@/lib/format";
 import {
   Dialog,
@@ -75,6 +76,7 @@ export function ProductManager({
   const [creatingNew, setCreatingNew] = useState(false);
   const [selectedCatalog, setSelectedCatalog] = useState<CatalogProductSearchResult | null>(null);
   const [requestTarget, setRequestTarget] = useState<Product | null>(null);
+  const [labelTarget, setLabelTarget] = useState<Product | null>(null);
 
   function resetDialog() {
     setEditing(null);
@@ -358,6 +360,11 @@ export function ProductManager({
                     <Badge variant={p.isPublished ? "default" : "secondary"}>{p.isPublished ? "Ha" : "Yo'q"}</Badge>
                   </TableCell>
                   <TableCell className="flex justify-end gap-1">
+                    {p.catalogProduct.barcode && (
+                      <Button size="icon" variant="ghost" onClick={() => setLabelTarget(p)} title="Shtrix-kod yorlig'ini chop etish">
+                        <Barcode className="size-4" />
+                      </Button>
+                    )}
                     <Button
                       size="icon"
                       variant="ghost"
@@ -444,6 +451,15 @@ export function ProductManager({
           )}
         </DialogContent>
       </Dialog>
+
+      {labelTarget && (
+        <BarcodeLabelDialog
+          open={!!labelTarget}
+          onOpenChange={(open) => !open && setLabelTarget(null)}
+          productName={labelTarget.catalogProduct.name}
+          barcode={labelTarget.catalogProduct.barcode!}
+        />
+      )}
     </div>
   );
 }

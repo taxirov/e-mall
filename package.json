@@ -7,6 +7,7 @@
     "build": "prisma migrate deploy && next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
     "seed": "tsx prisma/seed.ts",
     "postinstall": "prisma generate"
   },
@@ -19,6 +20,7 @@
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "jsbarcode": "^3.12.3",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^1.33.0",
     "next": "16.3.1",
@@ -38,6 +40,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/jsbarcode": "^3.11.4",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.6",
@@ -48,7 +51,8 @@
     "eslint-config-next": "16.3.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.12",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.11"
   },
   "allowScripts": {
     "@prisma/engines@7.9.1": true,

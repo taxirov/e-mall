@@ -3,12 +3,13 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Barcode } from "lucide-react";
 import { createCatalogProductAsAdmin, updateCatalogProduct } from "@/actions/catalog-products";
 import { collectAttributeValues } from "@/lib/collect-attribute-values";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CatalogFields, type ProductAttributeDef } from "@/components/catalog-fields";
+import { BarcodeLabelDialog } from "@/components/barcode-label-dialog";
 import type { CategoryTreeNode } from "@/components/category-select";
 import {
   Dialog,
@@ -54,6 +55,7 @@ export function AdminProductsManager({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<CatalogProduct | null>(null);
   const [search, setSearch] = useState("");
+  const [labelTarget, setLabelTarget] = useState<CatalogProduct | null>(null);
 
   const filtered = initialProducts.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
 
@@ -152,7 +154,12 @@ export function AdminProductsManager({
                 <TableCell className="text-muted-foreground">{p.categoryName}</TableCell>
                 <TableCell className="text-muted-foreground">{p.createdByStoreName ?? "Administrator"}</TableCell>
                 <TableCell>{p.storeCount}</TableCell>
-                <TableCell className="text-right">
+                <TableCell className="flex justify-end gap-1.5">
+                  {p.barcode && (
+                    <Button size="icon" variant="ghost" onClick={() => setLabelTarget(p)} title="Shtrix-kod yorlig'ini chop etish">
+                      <Barcode className="size-4" />
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="outline"
@@ -176,6 +183,15 @@ export function AdminProductsManager({
           </TableBody>
         </Table>
       </div>
+
+      {labelTarget && (
+        <BarcodeLabelDialog
+          open={!!labelTarget}
+          onOpenChange={(open) => !open && setLabelTarget(null)}
+          productName={labelTarget.name}
+          barcode={labelTarget.barcode!}
+        />
+      )}
     </div>
   );
 }

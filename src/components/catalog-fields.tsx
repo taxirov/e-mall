@@ -73,7 +73,7 @@ export function CatalogFields({
   return (
     <div className="space-y-4 rounded-md border p-3">
       <p className="text-xs font-medium text-muted-foreground">{title}</p>
-      <BarcodeLookup onFound={handleFound} />
+      <BarcodeLookup onFound={handleFound} onNotFound={(code) => setBarcode(code)} />
       <input type="hidden" name="soliqId" value={soliq.soliqId} />
       <input type="hidden" name="soliqPosition" value={soliq.soliqPosition} />
       <input type="hidden" name="soliqBrand" value={soliq.soliqBrand} />

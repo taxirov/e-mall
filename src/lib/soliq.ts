@@ -9,7 +9,9 @@ export type SoliqLookupResult = {
   suggestedName: string;
 };
 
-export type SoliqLookupOutcome = { ok: true; data: SoliqLookupResult } | { ok: false; error: string };
+export type SoliqLookupOutcome =
+  | { ok: true; data: SoliqLookupResult }
+  | { ok: false; error: string; reason: "invalid" | "network" | "not-found" };
 
 type SoliqApiResponse = {
   success: boolean;
@@ -40,7 +42,9 @@ function parseBrandName(raw: string): string {
  */
 export async function lookupBarcode(barcode: string): Promise<SoliqLookupOutcome> {
   const parsed = barcodeSchema.safeParse(barcode);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Noto'g'ri shtrix-kod" };
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Noto'g'ri shtrix-kod", reason: "invalid" };
+  }
 
   let json: SoliqApiResponse;
   try {
@@ -50,11 +54,17 @@ export async function lookupBarcode(barcode: string): Promise<SoliqLookupOutcome
     );
     json = await res.json();
   } catch {
-    return { ok: false, error: "Soliq tizimiga ulanib bo'lmadi, birozdan so'ng qayta urinib ko'ring" };
+    return { ok: false, error: "Soliq tizimiga ulanib bo'lmadi, birozdan so'ng qayta urinib ko'ring", reason: "network" };
   }
 
   const item = json?.success ? json.data?.[0] : undefined;
-  if (!item) return { ok: false, error: "Bu shtrix-kod bo'yicha mahsulot topilmadi" };
+  if (!item) {
+    return {
+      ok: false,
+      error: "Bu shtrix-kod bo'yicha mahsulot topilmadi. Shtrix-kod maydoniga qo'shildi — qolgan ma'lumotlarni qo'lda kiriting.",
+      reason: "not-found",
+    };
+  }
 
   const soliqBrand = item.brand ?? "";
   return {
