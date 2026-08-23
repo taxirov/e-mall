@@ -32,7 +32,7 @@ export function ReceiptPreview({ receipt }: { receipt: ReceiptData }) {
   }, [receipt.storeName, receipt.receiptNumber]);
 
   return (
-    <div id="pos-receipt" className="mx-auto w-full max-w-[300px] bg-white p-4 font-mono text-[13px] leading-snug text-black">
+    <div data-print-target className="mx-auto w-full max-w-[300px] bg-white p-4 font-mono text-[13px] leading-snug text-black">
       <p className="text-center text-sm font-bold uppercase">{receipt.storeName}</p>
       <div className="my-2 border-t border-dashed border-black" />
       <div className="flex justify-between">
@@ -60,6 +60,18 @@ export function ReceiptPreview({ receipt }: { receipt: ReceiptData }) {
         </div>
       ))}
       <div className="my-2 border-t border-dashed border-black" />
+      {receipt.discountAmount > 0 && (
+        <>
+          <div className="flex justify-between text-xs">
+            <span>Oraliq summa:</span>
+            <span>{formatSom(receipt.subtotal)} so&apos;m</span>
+          </div>
+          <div className="flex justify-between text-xs">
+            <span>Chegirma{receipt.couponCode ? ` (${receipt.couponCode})` : ""}:</span>
+            <span>-{formatSom(receipt.discountAmount)} so&apos;m</span>
+          </div>
+        </>
+      )}
       <div className="flex justify-between text-sm font-bold">
         <span>JAMI</span>
         <span>{formatSom(receipt.total)} so&apos;m</span>

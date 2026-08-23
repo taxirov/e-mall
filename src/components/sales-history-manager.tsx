@@ -17,6 +17,8 @@ type SaleRow = {
   paymentMethod: "CASH" | "CARD";
   cashierName: string;
   total: string;
+  discountAmount: string;
+  couponCode: string | null;
   items: { name: string; qty: number; price: string }[];
 };
 
@@ -41,6 +43,8 @@ export function SalesHistoryManager({ storeName, sales }: { storeName: string; s
   const totalSum = filtered.reduce((sum, s) => sum + Number(s.total), 0);
 
   function viewReceipt(sale: SaleRow) {
+    const total = Number(sale.total);
+    const discountAmount = Number(sale.discountAmount);
     setReceipt({
       receiptNumber: sale.receiptNumber,
       storeName,
@@ -48,7 +52,10 @@ export function SalesHistoryManager({ storeName, sales }: { storeName: string; s
       createdAt: sale.createdAt,
       paymentMethod: sale.paymentMethod,
       items: sale.items.map((item) => ({ name: item.name, qty: item.qty, price: Number(item.price) })),
-      total: Number(sale.total),
+      subtotal: total + discountAmount,
+      discountAmount,
+      couponCode: sale.couponCode,
+      total,
     });
     setReceiptOpen(true);
   }

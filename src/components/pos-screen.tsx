@@ -2,8 +2,10 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { ShoppingCart, Plus, Minus, Trash2, Banknote, CreditCard, X } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Banknote, CreditCard, X, Tag } from "lucide-react";
 import { createSale, type ReceiptData } from "@/actions/pos";
+import { validateCoupon } from "@/actions/coupons";
+import { computeDiscount } from "@/lib/discount";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,7 +18,8 @@ import { formatSom } from "@/lib/format";
 type Product = { id: string; name: string; price: string; stock: number; categoryId: string | null; imageUrl: string | null };
 type Category = { id: string; name: string };
 type CartLine = { productId: string; name: string; price: number; qty: number; maxStock: number };
-type CartTab = { id: string; label: string; lines: CartLine[]; paymentMethod: "CASH" | "CARD" };
+type AppliedCoupon = { code: string; type: "PERCENT" | "FIXED"; value: number };
+type CartTab = { id: string; label: string; lines: CartLine[]; paymentMethod: "CASH" | "CARD"; coupon: AppliedCoupon | null };
 
 export function PosScreen({
   storeActive,
@@ -31,10 +34,13 @@ export function PosScreen({
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const tabCounter = useRef(1);
-  const [tabs, setTabs] = useState<CartTab[]>([{ id: "tab-1", label: "Savat 1", lines: [], paymentMethod: "CASH" }]);
+  const [tabs, setTabs] = useState<CartTab[]>([
+    { id: "tab-1", label: "Savat 1", lines: [], paymentMethod: "CASH", coupon: null },
+  ]);
   const [activeTabId, setActiveTabId] = useState("tab-1");
   const [cartOpen, setCartOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [couponPending, startCouponTransition] = useTransition();
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
   const [receiptOpen, setReceiptOpen] = useState(false);
 
@@ -57,7 +63,9 @@ export function PosScreen({
     [products, search, activeCategory]
   );
 
-  const total = activeTab.lines.reduce((sum, line) => sum + line.price * line.qty, 0);
+  const subtotal = activeTab.lines.reduce((sum, line) => sum + line.price * line.qty, 0);
+  const discount = activeTab.coupon ? computeDiscount(activeTab.coupon.type, activeTab.coupon.value, subtotal) : 0;
+  const total = subtotal - discount;
   const itemCount = activeTab.lines.reduce((sum, line) => sum + line.qty, 0);
 
   function updateTab(id: string, updater: (tab: CartTab) => CartTab) {
@@ -100,21 +108,44 @@ export function PosScreen({
   }
 
   function clearActiveTab() {
-    updateTab(activeTab.id, (tab) => ({ ...tab, lines: [] }));
+    updateTab(activeTab.id, (tab) => ({ ...tab, lines: [], coupon: null }));
   }
 
   function newTab() {
     tabCounter.current += 1;
-    const tab: CartTab = { id: `tab-${Date.now()}`, label: `Savat ${tabCounter.current}`, lines: [], paymentMethod: "CASH" };
+    const tab: CartTab = {
+      id: `tab-${Date.now()}`,
+      label: `Savat ${tabCounter.current}`,
+      lines: [],
+      paymentMethod: "CASH",
+      coupon: null,
+    };
     setTabs((prev) => [...prev, tab]);
     setActiveTabId(tab.id);
   }
 
   function closeTab(id: string) {
     setTabs((prev) => {
-      if (prev.length === 1) return prev.map((t) => (t.id === id ? { ...t, lines: [] } : t));
+      if (prev.length === 1) return prev.map((t) => (t.id === id ? { ...t, lines: [], coupon: null } : t));
       return prev.filter((t) => t.id !== id);
     });
+  }
+
+  function applyCoupon(code: string) {
+    if (!code.trim()) return;
+    startCouponTransition(async () => {
+      const result = await validateCoupon(code, subtotal);
+      if (result.ok) {
+        updateTab(activeTab.id, (tab) => ({ ...tab, coupon: { code: result.code, type: result.type, value: result.value } }));
+        toast.success(`Kupon qo'llandi: ${result.code}`);
+      } else {
+        toast.error(result.error);
+      }
+    });
+  }
+
+  function removeCoupon() {
+    updateTab(activeTab.id, (tab) => ({ ...tab, coupon: null }));
   }
 
   function checkout() {
@@ -122,11 +153,13 @@ export function PosScreen({
     const tabId = activeTab.id;
     const saleLines = activeTab.lines;
     const saleMethod = activeTab.paymentMethod;
+    const saleCouponCode = activeTab.coupon?.code ?? null;
 
     startTransition(async () => {
       const result = await createSale({
         items: saleLines.map((l) => ({ productId: l.productId, qty: l.qty })),
         paymentMethod: saleMethod,
+        couponCode: saleCouponCode,
       });
       if (result.ok) {
         toast.success("Sotuv muvaffaqiyatli yakunlandi");
@@ -140,7 +173,7 @@ export function PosScreen({
         setReceiptOpen(true);
         setCartOpen(false);
         setTabs((prev) => {
-          if (prev.length === 1) return prev.map((t) => (t.id === tabId ? { ...t, lines: [] } : t));
+          if (prev.length === 1) return prev.map((t) => (t.id === tabId ? { ...t, lines: [], coupon: null } : t));
           return prev.filter((t) => t.id !== tabId);
         });
       } else {
@@ -235,12 +268,17 @@ export function PosScreen({
             setActiveTabId={setActiveTabId}
             newTab={newTab}
             closeTab={closeTab}
+            subtotal={subtotal}
+            discount={discount}
             total={total}
             changeQty={changeQty}
             removeLine={removeLine}
             setPaymentMethod={setPaymentMethod}
             checkout={checkout}
             clearActiveTab={clearActiveTab}
+            applyCoupon={applyCoupon}
+            removeCoupon={removeCoupon}
+            couponPending={couponPending}
             pending={pending}
           />
         </Card>
@@ -273,12 +311,17 @@ export function PosScreen({
               setActiveTabId={setActiveTabId}
               newTab={newTab}
               closeTab={closeTab}
+              subtotal={subtotal}
+              discount={discount}
               total={total}
               changeQty={changeQty}
               removeLine={removeLine}
               setPaymentMethod={setPaymentMethod}
               checkout={checkout}
               clearActiveTab={clearActiveTab}
+              applyCoupon={applyCoupon}
+              removeCoupon={removeCoupon}
+              couponPending={couponPending}
               pending={pending}
             />
           </div>
@@ -297,12 +340,17 @@ function CartPanel({
   setActiveTabId,
   newTab,
   closeTab,
+  subtotal,
+  discount,
   total,
   changeQty,
   removeLine,
   setPaymentMethod,
   checkout,
   clearActiveTab,
+  applyCoupon,
+  removeCoupon,
+  couponPending,
   pending,
 }: {
   tabs: CartTab[];
@@ -310,14 +358,20 @@ function CartPanel({
   setActiveTabId: (id: string) => void;
   newTab: () => void;
   closeTab: (id: string) => void;
+  subtotal: number;
+  discount: number;
   total: number;
   changeQty: (id: string, delta: number) => void;
   removeLine: (id: string) => void;
   setPaymentMethod: (m: "CASH" | "CARD") => void;
   checkout: () => void;
   clearActiveTab: () => void;
+  applyCoupon: (code: string) => void;
+  removeCoupon: () => void;
+  couponPending: boolean;
   pending: boolean;
 }) {
+  const [couponInput, setCouponInput] = useState("");
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
@@ -377,6 +431,42 @@ function CartPanel({
         ))}
       </div>
 
+      {activeTab.lines.length > 0 &&
+        (activeTab.coupon ? (
+          <div className="flex items-center justify-between rounded-md border border-brand/30 bg-brand/5 px-3 py-2 text-sm">
+            <span className="flex items-center gap-1.5 font-medium text-brand">
+              <Tag className="size-3.5" />
+              {activeTab.coupon.code}
+            </span>
+            <button type="button" onClick={removeCoupon} className="text-muted-foreground hover:text-foreground">
+              <X className="size-3.5" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <Input
+              placeholder="Kupon kodi"
+              value={couponInput}
+              onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  applyCoupon(couponInput);
+                }
+              }}
+              className="flex-1"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!couponInput.trim() || couponPending}
+              onClick={() => applyCoupon(couponInput)}
+            >
+              Qo&apos;llash
+            </Button>
+          </div>
+        ))}
+
       <div className="flex gap-2">
         <button
           type="button"
@@ -400,6 +490,18 @@ function CartPanel({
         </button>
       </div>
 
+      {discount > 0 && (
+        <div className="space-y-1 text-sm">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span>Oraliq summa</span>
+            <span>{formatSom(subtotal)} so&apos;m</span>
+          </div>
+          <div className="flex items-center justify-between text-brand">
+            <span>Chegirma</span>
+            <span>-{formatSom(discount)} so&apos;m</span>
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between text-lg font-semibold">
         <span>Jami</span>
         <span>{formatSom(total)} so&apos;m</span>

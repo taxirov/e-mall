@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Menu, LayoutDashboard, Package, Users, ClipboardList, ShoppingCart, Settings, LogOut, Warehouse, Tags, Send, Bell, Store, SlidersHorizontal, Receipt } from "lucide-react";
+import { Menu, LayoutDashboard, Package, Users, ClipboardList, ShoppingCart, Settings, LogOut, Warehouse, Tags, Send, Bell, Store, SlidersHorizontal, Receipt, BarChart3, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { DashboardNotifications } from "@/components/dashboard-notifications";
@@ -16,6 +16,7 @@ type NavItem = { href: string; label: string; icon: React.ComponentType<{ classN
 
 const NAV_ITEMS: Record<string, NavItem[]> = {
   SUPER_ADMIN: [
+    { href: "/dashboard/admin/analytics", label: "Analitika", icon: BarChart3 },
     { href: "/dashboard/admin", label: "Do'konlar", icon: LayoutDashboard },
     { href: "/dashboard/admin/store-types", label: "Do'kon turlari", icon: Store },
     { href: "/dashboard/admin/categories", label: "Kategoriyalar", icon: Tags },
@@ -34,6 +35,7 @@ const NAV_ITEMS: Record<string, NavItem[]> = {
     { href: "/dashboard/owner/requests", label: "Mening so'rovlarim", icon: Send },
     { href: "/dashboard/pos", label: "POS", icon: ShoppingCart },
     { href: "/dashboard/owner/sales", label: "Savdolar tarixi", icon: Receipt },
+    { href: "/dashboard/owner/coupons", label: "Kuponlar", icon: Tag },
     { href: "/dashboard/notifications", label: "Bildirishnomalar", icon: Bell },
     { href: "/dashboard/owner/settings", label: "Sozlamalar", icon: Settings },
   ],

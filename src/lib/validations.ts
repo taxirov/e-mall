@@ -179,8 +179,29 @@ export const cartItemSchema = z.object({
 export const saleSchema = z.object({
   items: z.array(cartItemSchema).min(1, "Kamida bitta mahsulot tanlang"),
   paymentMethod: z.enum(["CASH", "CARD"]),
+  couponCode: z.string().trim().optional().nullable(),
 });
 export type SaleInput = z.infer<typeof saleSchema>;
+
+export const COUPON_TYPES = ["PERCENT", "FIXED"] as const;
+export const couponSchema = z
+  .object({
+    code: z
+      .string()
+      .trim()
+      .min(3, "Kupon kodi kamida 3 ta belgidan iborat bo'lishi kerak")
+      .max(20, "Kupon kodi 20 ta belgidan oshmasligi kerak")
+      .regex(/^[A-Za-z0-9]+$/, "Kupon kodi faqat lotin harflari va raqamlardan iborat bo'lishi kerak"),
+    type: z.enum(COUPON_TYPES),
+    value: z.coerce.number().positive("Qiymat musbat bo'lishi kerak"),
+    maxUses: z.coerce.number().int().positive("Butun musbat son bo'lishi kerak").optional().nullable(),
+    expiresAt: z.string().optional().nullable(),
+  })
+  .refine((data) => data.type !== "PERCENT" || data.value <= 100, {
+    message: "Foiz chegirma 100 dan oshmasligi kerak",
+    path: ["value"],
+  });
+export type CouponInput = z.infer<typeof couponSchema>;
 
 export const slugSchema = z
   .string()

@@ -28,6 +28,11 @@ enum PaymentMethod {
   CARD
 }
 
+enum CouponType {
+  PERCENT
+  FIXED
+}
+
 enum OrderStatus {
   PENDING
   CONFIRMED
@@ -114,8 +119,30 @@ model Store {
   orders               Order[]
   inventoryLogs        InventoryLog[]
   stockReceipts        StockReceipt[]
+  coupons              Coupon[]
   createdAt            DateTime             @default(now())
   updatedAt            DateTime             @updatedAt
+}
+
+/// A store-scoped discount code, redeemed at POS checkout. `usedCount` is
+/// incremented atomically inside the same transaction that creates the Sale,
+/// so it also doubles as the enforcement for `maxUses`.
+model Coupon {
+  id        String     @id @default(cuid())
+  storeId   String
+  store     Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  code      String
+  type      CouponType
+  value     Decimal    @db.Decimal(12, 2)
+  maxUses   Int?
+  usedCount Int        @default(0)
+  active    Boolean    @default(true)
+  expiresAt DateTime?
+  sales     Sale[]
+  createdAt DateTime   @default(now())
+
+  @@unique([storeId, code])
+  @@index([storeId])
 }
 
 /// A business category a store can operate as (e.g. "Oziq-ovqat",
@@ -321,13 +348,18 @@ model Sale {
   sellerId      String
   seller        User          @relation(fields: [sellerId], references: [id])
   items         SaleItem[]
+  /// Final charged amount, after `discountAmount` is subtracted from the sum of line items.
   total         Decimal       @db.Decimal(12, 2)
+  discountAmount Decimal      @default(0) @db.Decimal(12, 2)
+  couponId      String?
+  coupon        Coupon?       @relation(fields: [couponId], references: [id], onDelete: SetNull)
   paymentMethod PaymentMethod
   receiptNumber String        @unique
   createdAt     DateTime      @default(now())
 
   @@index([storeId])
   @@index([storeId, createdAt])
+  @@index([couponId])
 }
 
 model SaleItem {

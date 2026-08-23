@@ -15,6 +15,7 @@ export default async function SalesHistoryPage() {
       orderBy: { createdAt: "desc" },
       include: {
         seller: { select: { fullName: true } },
+        coupon: { select: { code: true } },
         items: { include: { product: { include: { catalogProduct: { select: { name: true } } } } } },
       },
     }),
@@ -31,6 +32,8 @@ export default async function SalesHistoryPage() {
         paymentMethod: sale.paymentMethod,
         cashierName: sale.seller.fullName,
         total: sale.total.toString(),
+        discountAmount: sale.discountAmount.toString(),
+        couponCode: sale.coupon?.code ?? null,
         items: sale.items.map((item) => ({
           name: item.product.catalogProduct.name,
           qty: item.qty,

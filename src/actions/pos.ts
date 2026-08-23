@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireStoreMember } from "@/lib/authz";
 import { saleSchema } from "@/lib/validations";
+import { computeDiscount } from "@/lib/discount";
 import { broadcastToStore } from "@/lib/realtime";
 import type { ActionResult } from "./auth";
 
@@ -14,6 +15,9 @@ export type ReceiptData = {
   createdAt: string;
   paymentMethod: "CASH" | "CARD";
   items: { name: string; qty: number; price: number }[];
+  subtotal: number;
+  discountAmount: number;
+  couponCode: string | null;
   total: number;
 };
 
@@ -23,7 +27,7 @@ export async function createSale(
   const { session, storeId } = await requireStoreMember();
   const parsed = saleSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Xatolik" };
-  const { items, paymentMethod } = parsed.data;
+  const { items, paymentMethod, couponCode } = parsed.data;
 
   const [products, store] = await Promise.all([
     prisma.product.findMany({
@@ -40,10 +44,27 @@ export async function createSale(
     if (product.stock < item.qty) return { ok: false, error: `"${product.catalogProduct.name}" uchun qoldiq yetarli emas` };
   }
 
-  const total = items.reduce((sum, item) => {
+  const subtotal = items.reduce((sum, item) => {
     const product = productMap.get(item.productId)!;
     return sum + Number(product.price) * item.qty;
   }, 0);
+
+  let couponId: string | null = null;
+  let discountAmount = 0;
+  let normalizedCouponCode: string | null = null;
+  if (couponCode) {
+    normalizedCouponCode = couponCode.trim().toUpperCase();
+    const coupon = await prisma.coupon.findUnique({ where: { storeId_code: { storeId, code: normalizedCouponCode } } });
+    if (!coupon) return { ok: false, error: "Bunday kupon topilmadi" };
+    if (!coupon.active) return { ok: false, error: "Bu kupon faol emas" };
+    if (coupon.expiresAt && coupon.expiresAt < new Date()) return { ok: false, error: "Bu kuponning muddati tugagan" };
+    if (coupon.maxUses != null && coupon.usedCount >= coupon.maxUses) {
+      return { ok: false, error: "Bu kupon limiti tugagan" };
+    }
+    discountAmount = computeDiscount(coupon.type, Number(coupon.value), subtotal);
+    couponId = coupon.id;
+  }
+  const total = subtotal - discountAmount;
 
   const receiptNumber = `R-${Date.now().toString(36).toUpperCase()}`;
 
@@ -53,6 +74,8 @@ export async function createSale(
         storeId,
         sellerId: session.user.id,
         total,
+        discountAmount,
+        couponId,
         paymentMethod,
         receiptNumber,
         items: {
@@ -76,6 +99,10 @@ export async function createSale(
       });
     }
 
+    if (couponId) {
+      await tx.coupon.update({ where: { id: couponId }, data: { usedCount: { increment: 1 } } });
+    }
+
     return created;
   });
 
@@ -92,6 +119,7 @@ export async function createSale(
 
   revalidatePath("/dashboard/owner");
   revalidatePath("/dashboard/pos");
+  if (couponId) revalidatePath("/dashboard/owner/coupons");
 
   const receipt: ReceiptData = {
     receiptNumber: sale.receiptNumber,
@@ -104,6 +132,9 @@ export async function createSale(
       qty: item.qty,
       price: Number(productMap.get(item.productId)!.price),
     })),
+    subtotal,
+    discountAmount,
+    couponCode: normalizedCouponCode,
     total,
   };
 
