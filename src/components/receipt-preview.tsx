@@ -45,7 +45,7 @@ export function ReceiptPreview({ receipt }: { receipt: ReceiptData }) {
       </div>
       <div className="flex justify-between">
         <span>Chek raqami:</span>
-        <span>{receipt.receiptNumber}</span>
+        <span data-no-transliterate>{receipt.receiptNumber}</span>
       </div>
       <div className="my-2 border-t border-dashed border-black" />
       {receipt.items.map((item, i) => (

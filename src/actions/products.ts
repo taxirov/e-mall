@@ -6,6 +6,7 @@ import { requireStoreMember } from "@/lib/authz";
 import { productSchema } from "@/lib/validations";
 import { broadcastToStore } from "@/lib/realtime";
 import { saveAttributeValues } from "./catalog-products";
+import { canonicalizeLatin } from "@/lib/canonical-name";
 import type { ActionResult } from "./auth";
 
 /**
@@ -28,6 +29,7 @@ export async function createProduct(input: unknown): Promise<ActionResult> {
     const created = await prisma.catalogProduct.create({
       data: {
         ...catalogData,
+        name: await canonicalizeLatin(catalogData.name),
         createdByStoreId: storeId,
         createdById: session.user.id,
       },

@@ -26,7 +26,7 @@ export default async function AdminStoresPage() {
               <div>
                 <CardTitle className="text-base">{store.name}</CardTitle>
                 <p className="text-xs text-muted-foreground">
-                  {store.slug} · {store.owner.fullName} · {store.owner.phone}
+                  <span data-no-transliterate>{store.slug}</span> · {store.owner.fullName} · {store.owner.phone}
                 </p>
               </div>
               <Badge

@@ -90,11 +90,13 @@ export function StoreSettingsForm({
               <Label htmlFor="slug">Subdomen</Label>
               <div className="flex items-center gap-1">
                 <Input id="slug" value={slug} onChange={(e) => setSlug(slugify(e.target.value))} required />
-                <span className="shrink-0 text-sm text-muted-foreground">.{ROOT_DOMAIN}</span>
+                <span data-no-transliterate className="shrink-0 text-sm text-muted-foreground">
+                  .{ROOT_DOMAIN}
+                </span>
               </div>
               <p className="text-xs text-muted-foreground">
                 Do&apos;kon vitrinangiz manzili:{" "}
-                <span className="font-medium text-foreground">
+                <span data-no-transliterate className="font-medium text-foreground">
                   {slug || "..."}.{ROOT_DOMAIN}
                 </span>
                 . O&apos;zgartirsangiz, eski manzil ishlamay qoladi.

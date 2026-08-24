@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/authz";
 import { updateStoreSettingsSchema } from "@/lib/validations";
 import { isReservedSlug } from "@/lib/domain";
+import { canonicalizeLatin } from "@/lib/canonical-name";
 import type { ActionResult } from "./auth";
 
 export async function updateStoreSettings(input: unknown): Promise<ActionResult<{ slug: string }>> {
@@ -40,7 +41,7 @@ export async function updateStoreSettings(input: unknown): Promise<ActionResult<
   await prisma.store.update({
     where: { id: storeId },
     data: {
-      name,
+      name: await canonicalizeLatin(name),
       description: description || null,
       slug,
       logoUrl: logoUrl || null,

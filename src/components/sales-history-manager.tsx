@@ -167,7 +167,9 @@ export function SalesHistoryManager({
           <Card key={sale.id}>
             <CardHeader className="flex-row items-start justify-between space-y-0">
               <div>
-                <CardTitle className="text-base">{sale.receiptNumber}</CardTitle>
+                <CardTitle data-no-transliterate className="text-base">
+                  {sale.receiptNumber}
+                </CardTitle>
                 <p className="text-xs text-muted-foreground">
                   {formatDateTime(sale.createdAt)} · {sale.cashierName}
                 </p>

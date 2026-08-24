@@ -11,6 +11,7 @@ import {
 } from "@/lib/validations";
 import { slugify, isReservedSlug } from "@/lib/domain";
 import { broadcastToAdmins } from "@/lib/realtime";
+import { canonicalizeLatin } from "@/lib/canonical-name";
 
 export type ActionResult<T = undefined> =
   | { ok: true; data: T }
@@ -41,11 +42,12 @@ export async function checkStoreNameAvailable(name: unknown): Promise<NameAvaila
     return { status: "invalid", message: STORE_NAME_CHARS_HINT };
   }
 
-  const slug = slugify(trimmed);
+  const canonicalName = await canonicalizeLatin(trimmed);
+  const slug = slugify(canonicalName);
   if (!slug || isReservedSlug(slug)) return { status: "taken" };
 
   const existing = await prisma.store.findFirst({
-    where: { OR: [{ slug }, { name: { equals: trimmed, mode: "insensitive" } }] },
+    where: { OR: [{ slug }, { name: { equals: canonicalName, mode: "insensitive" } }] },
     select: { id: true },
   });
   return existing ? { status: "taken" } : { status: "available" };
@@ -67,7 +69,8 @@ export async function registerStore(input: unknown): Promise<ActionResult<{ stor
     return { ok: false, error: "Bu Telegram hisobi allaqachon boshqa foydalanuvchiga bog'langan" };
   }
 
-  const baseSlug = slugify(storeName) || "dokon";
+  const canonicalStoreName = await canonicalizeLatin(storeName);
+  const baseSlug = slugify(canonicalStoreName) || "dokon";
   let slug = baseSlug;
   let suffix = 1;
   while (isReservedSlug(slug) || (await prisma.store.findUnique({ where: { slug } }))) {
@@ -83,7 +86,7 @@ export async function registerStore(input: unknown): Promise<ActionResult<{ stor
     });
     const store = await tx.store.create({
       data: {
-        name: storeName,
+        name: canonicalStoreName,
         slug,
         ownerId: user.id,
         status: "PENDING",
@@ -93,7 +96,7 @@ export async function registerStore(input: unknown): Promise<ActionResult<{ stor
     await tx.user.update({ where: { id: user.id }, data: { storeId: store.id } });
   });
 
-  await broadcastToAdmins("store:new", { name: storeName, slug, ownerName: fullName, ownerPhone: phone });
+  await broadcastToAdmins("store:new", { name: canonicalStoreName, slug, ownerName: fullName, ownerPhone: phone });
 
   return { ok: true, data: { storeSlug: slug } };
 }

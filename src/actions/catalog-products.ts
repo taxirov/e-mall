@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole, requireStoreMember } from "@/lib/authz";
 import { catalogProductSchema, editRequestSchema } from "@/lib/validations";
 import { broadcastToAdmins, broadcastToStore } from "@/lib/realtime";
+import { canonicalizeLatin } from "@/lib/canonical-name";
 import type { ActionResult } from "./auth";
 
 /** Persists a catalog product's custom-attribute values (sparse — only entries actually filled in). */
@@ -93,6 +94,7 @@ export async function updateCatalogProduct(catalogProductId: string, input: unkn
   }
 
   const { attributes, ...catalogData } = parsed.data;
+  catalogData.name = await canonicalizeLatin(catalogData.name);
   await prisma.catalogProduct.update({ where: { id: catalogProductId }, data: catalogData });
   await saveAttributeValues(catalogProductId, attributes);
   revalidatePath("/dashboard/owner/products");
@@ -108,6 +110,7 @@ export async function createCatalogProductAsAdmin(input: unknown): Promise<Actio
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Xatolik" };
 
   const { attributes, ...catalogData } = parsed.data;
+  catalogData.name = await canonicalizeLatin(catalogData.name);
   const created = await prisma.catalogProduct.create({
     data: { ...catalogData, createdById: session.user.id },
   });

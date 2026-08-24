@@ -6,6 +6,7 @@ import { requireRole } from "@/lib/authz";
 import { hashPassword } from "@/lib/password";
 import { createUserAsAdminSchema } from "@/lib/validations";
 import { slugify, isReservedSlug } from "@/lib/domain";
+import { canonicalizeLatin } from "@/lib/canonical-name";
 import type { ActionResult } from "./auth";
 
 /** Super Admin creating a user directly — no Telegram verification, since the admin is the trusted party here. */
@@ -25,7 +26,8 @@ export async function createUserAsAdmin(input: unknown): Promise<ActionResult> {
       data: { fullName: data.fullName, phone: data.phone, passwordHash, role: data.role },
     });
   } else if (data.role === "OWNER") {
-    const baseSlug = slugify(data.storeName) || "dokon";
+    const canonicalStoreName = await canonicalizeLatin(data.storeName);
+    const baseSlug = slugify(canonicalStoreName) || "dokon";
     let slug = baseSlug;
     let suffix = 1;
     while (isReservedSlug(slug) || (await prisma.store.findUnique({ where: { slug } }))) {
@@ -39,7 +41,7 @@ export async function createUserAsAdmin(input: unknown): Promise<ActionResult> {
       });
       const store = await tx.store.create({
         data: {
-          name: data.storeName,
+          name: canonicalStoreName,
           slug,
           ownerId: user.id,
           status: "ACTIVE",
