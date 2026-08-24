@@ -6,6 +6,8 @@ import { Toaster } from "@/components/ui/sonner";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import { ScriptProvider } from "@/contexts/script-context";
 import { ScriptTransliterator } from "@/components/script-transliterator";
+import { ThemeScheduleProvider } from "@/contexts/theme-schedule-context";
+import { ThemeScheduler } from "@/components/theme-scheduler";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -44,12 +46,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-          <ScriptProvider>
-            {children}
-            <ScriptTransliterator />
-            <Toaster position="top-center" />
-            <ServiceWorkerRegister />
-          </ScriptProvider>
+          <ThemeScheduleProvider>
+            <ScriptProvider>
+              {children}
+              <ScriptTransliterator />
+              <ThemeScheduler />
+              <Toaster position="top-center" />
+              <ServiceWorkerRegister />
+            </ScriptProvider>
+          </ThemeScheduleProvider>
         </ThemeProvider>
       </body>
     </html>

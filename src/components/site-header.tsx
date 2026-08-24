@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { auth, signOut } from "@/auth";
 import { Button } from "@/components/ui/button";
 import { ScriptToggle } from "@/components/script-toggle";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { appOrigin } from "@/lib/domain";
 
 export async function SiteHeader() {
@@ -22,6 +23,7 @@ export async function SiteHeader() {
         {session?.user ? (
           <div className="flex items-center gap-2">
             <ScriptToggle className="hidden sm:flex" />
+            <ThemeToggle className="hidden sm:flex" />
             <Button render={<Link href={`${appUrl}${dashboardPathFor(session.user.role)}`} />} nativeButton={false} variant="ghost" size="sm">
               Boshqaruv paneli
             </Button>
@@ -39,6 +41,7 @@ export async function SiteHeader() {
         ) : (
           <div className="flex items-center gap-2">
             <ScriptToggle className="hidden sm:flex" />
+            <ThemeToggle className="hidden sm:flex" />
             <Button render={<Link href={`${appUrl}/login`} />} nativeButton={false} variant="ghost" size="sm">
               Kirish
             </Button>
