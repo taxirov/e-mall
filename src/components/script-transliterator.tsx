@@ -1,8 +1,14 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { useScript } from "@/contexts/script-context";
 import { transliterateToCyrillic } from "@/actions/transliterate";
+
+// useLayoutEffect flushes synchronously before the browser paints, so a
+// cached conversion never flashes Latin first on navigation — but it warns
+// when it runs during SSR, so fall back to useEffect there.
+const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 // Module-level (not per-mount) so the cache survives client-side navigation
 // between pages instead of re-fetching the same handful of UI strings again.
@@ -71,9 +77,14 @@ export function chunkStrings(strings: string[], maxChars: number): string[][] {
  */
 export function ScriptTransliterator() {
   const { script } = useScript();
+  const pathname = usePathname();
   const pendingRef = useRef(new Set<string>());
 
-  useEffect(() => {
+  // Re-runs on every route change too (not just a script toggle) — otherwise
+  // a freshly navigated page renders its (Latin) server markup and only
+  // flips to Cyrillic once the MutationObserver below reacts, which can lag
+  // a paint behind.
+  useIsomorphicLayoutEffect(() => {
     let cancelled = false;
 
     function restore(nodes: Text[]) {
@@ -138,7 +149,7 @@ export function ScriptTransliterator() {
       cancelled = true;
       observer.disconnect();
     };
-  }, [script]);
+  }, [script, pathname]);
 
   return null;
 }
