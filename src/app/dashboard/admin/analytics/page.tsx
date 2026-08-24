@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { StatCard, computeTrend } from "@/components/stat-card";
 import { OrderChannelDonut } from "@/components/order-channel-donut";
 import { RevenueBreakdown } from "@/components/revenue-breakdown";
+import { AnalyticsExportButton } from "@/components/analytics-export-button";
 import { formatSom } from "@/lib/format";
 
 function countFor(groups: { status?: string; role?: string; _count: number }[], key: string): number {
@@ -100,9 +101,25 @@ export default async function AdminAnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">Analitika</h1>
-        <p className="text-sm text-muted-foreground">Platforma bo&apos;ylab bugungi ko&apos;rsatkichlar</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold">Analitika</h1>
+          <p className="text-sm text-muted-foreground">Platforma bo&apos;ylab bugungi ko&apos;rsatkichlar</p>
+        </div>
+        <AnalyticsExportButton
+          summary={[
+            { label: "Faol do'konlar", value: `${activeStores} / ${totalStores}` },
+            { label: "Tasdiqlanishi kutilmoqda", value: pendingStores },
+            { label: "Do'kon egalari", value: totalOwners },
+            { label: "Xaridorlar", value: totalCustomers },
+            { label: "Bugungi buyurtmalar", value: ordersTodayTotal },
+            { label: "Kutilayotgan buyurtmalar", value: pendingOrdersToday },
+            { label: "Jami savdo (barcha kanallar)", value: combinedTodaySum },
+            { label: "Do'konda (POS)", value: posTodaySum },
+            { label: "Onlayn buyurtmalar", value: onlineTodaySum },
+          ]}
+          topStores={topStoresRanked}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
