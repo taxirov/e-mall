@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ShoppingCart, Plus, Minus, Trash2, PackageSearch, Search, Sparkles } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, PackageSearch, Search, Sparkles, Percent } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -128,6 +128,11 @@ export function StorefrontCatalog({
                   {product.isNew && (
                     <Badge className="absolute top-1.5 left-1.5 gap-1 bg-brand text-brand-foreground">
                       <Sparkles className="size-3" /> Yangilik
+                    </Badge>
+                  )}
+                  {discountActive && (
+                    <Badge variant="destructive" className="absolute top-1.5 right-1.5 gap-1">
+                      <Percent className="size-3" /> Chegirma
                     </Badge>
                   )}
                 </div>

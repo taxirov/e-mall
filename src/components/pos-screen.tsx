@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { ShoppingCart, Plus, Minus, Trash2, Banknote, CreditCard, X, Tag, ScanLine, Sparkles } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Banknote, CreditCard, X, Tag, ScanLine, Sparkles, Percent } from "lucide-react";
 import { createSale, type ReceiptData } from "@/actions/pos";
 import { validateCoupon } from "@/actions/coupons";
 import { computeDiscount } from "@/lib/discount";
@@ -289,6 +289,11 @@ export function PosScreen({
                     {product.isNew && (
                       <Badge className="absolute top-1.5 left-1.5 gap-1 bg-brand text-brand-foreground">
                         <Sparkles className="size-3" /> Yangilik
+                      </Badge>
+                    )}
+                    {discountActive && (
+                      <Badge variant="destructive" className="absolute top-1.5 right-1.5 gap-1">
+                        <Percent className="size-3" /> Chegirma
                       </Badge>
                     )}
                   </div>

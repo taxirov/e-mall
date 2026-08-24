@@ -387,6 +387,7 @@ export function ProductManager({
                           Yangilik
                         </Badge>
                       )}
+                      {discountActive && <Badge variant="destructive">Chegirma</Badge>}
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{p.catalogProduct.categoryName}</TableCell>
