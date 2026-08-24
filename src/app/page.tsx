@@ -127,7 +127,9 @@ export default async function HomePage() {
       <section className="border-b bg-muted/20 px-4 py-16 sm:py-20">
         <div className="mx-auto max-w-6xl">
           <div className="mx-auto max-w-lg text-center">
-            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Nega aynan e-mall.uz?</h2>
+            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              Nega aynan <span data-no-transliterate>e-mall.uz</span>?
+            </h2>
             <p className="mt-2 text-sm text-muted-foreground sm:text-base">
               Do&apos;kon ochish uchun kerak bo&apos;lgan hamma narsa — alohida dasturlar sotib olmasdan.
             </p>

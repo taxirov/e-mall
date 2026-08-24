@@ -3,10 +3,10 @@
 import type { ActionResult } from "./auth";
 
 const API_TOKEN = process.env.MATN_UZ_API_TOKEN;
-// Generous enough for a page's worth of batched UI strings (the site-wide
-// script toggle) while keeping a single request from becoming unbounded —
-// this is a public, unauthenticated endpoint (landing page, storefront).
-const MAX_LENGTH = 20000;
+// matn.uz rejects any request over 1000 characters — callers batching
+// multiple strings (ScriptTransliterator) are expected to chunk to this
+// limit themselves; this is just the backstop.
+const MAX_LENGTH = 1000;
 
 /** Converts Uzbek Latin text to Uzbek Cyrillic via matn.uz. Public (no auth) — it's a stateless text utility with no database access, used both from dashboard forms and the site-wide script toggle on public pages. */
 export async function transliterateToCyrillic(text: unknown): Promise<ActionResult<string>> {
@@ -25,11 +25,19 @@ export async function transliterateToCyrillic(text: unknown): Promise<ActionResu
       body: JSON.stringify({ text }),
       signal: AbortSignal.timeout(10000),
     });
-    if (!res.ok) return { ok: false, error: "Krilchaga o'tkazishda xatolik yuz berdi" };
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      console.error("[transliterate] non-ok response", res.status, body.slice(0, 500));
+      return { ok: false, error: `Krilchaga o'tkazishda xatolik (${res.status})` };
+    }
     const result = await res.json();
-    if (typeof result !== "string") return { ok: false, error: "Krilchaga o'tkazishda xatolik yuz berdi" };
+    if (typeof result !== "string") {
+      console.error("[transliterate] unexpected shape", JSON.stringify(result).slice(0, 500));
+      return { ok: false, error: "Krilchaga o'tkazishda xatolik yuz berdi" };
+    }
     return { ok: true, data: result };
-  } catch {
+  } catch (err) {
+    console.error("[transliterate] fetch threw", err);
     return { ok: false, error: "Krilchaga o'tkazish xizmatiga ulanib bo'lmadi" };
   }
 }

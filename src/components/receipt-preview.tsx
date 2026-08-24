@@ -85,7 +85,9 @@ export function ReceiptPreview({ receipt }: { receipt: ReceiptData }) {
         // eslint-disable-next-line @next/next/no-img-element
         <img src={qrDataUrl} alt="" className="mx-auto size-24" />
       )}
-      <p className="mt-2 text-center text-xs">e-mall.uz orqali xizmat ko&apos;rsatildi</p>
+      <p className="mt-2 text-center text-xs">
+        <span data-no-transliterate>e-mall.uz</span> orqali xizmat ko&apos;rsatildi
+      </p>
     </div>
   );
 }
