@@ -232,12 +232,16 @@ const optionalPhone = z
   .nullable()
   .refine((v) => !v || /^\+998\d{9}$/.test(v), "Telefon raqam +998XXXXXXXXX formatida bo'lishi kerak");
 
-export const updateStoreSettingsSchema = z.object({
+export const updateStoreIdentitySchema = z.object({
   name: z.string().min(2, "Do'kon nomi kamida 2 ta belgidan iborat bo'lishi kerak"),
   description: z.string().max(500, "Tavsif 500 ta belgidan oshmasligi kerak").optional().nullable(),
   slug: slugSchema,
   logoUrl: optionalUrl,
   bannerUrl: optionalUrl,
+});
+export type UpdateStoreIdentityInput = z.infer<typeof updateStoreIdentitySchema>;
+
+export const updateStoreContactSchema = z.object({
   address: z.string().max(300, "Manzil 300 ta belgidan oshmasligi kerak").optional().nullable(),
   locationUrl: optionalUrl,
   workingHours: z.string().max(200, "Ish vaqti 200 ta belgidan oshmasligi kerak").optional().nullable(),
@@ -245,7 +249,18 @@ export const updateStoreSettingsSchema = z.object({
   instagramUrl: optionalUrl,
   telegramUrl: optionalUrl,
 });
-export type UpdateStoreSettingsInput = z.infer<typeof updateStoreSettingsSchema>;
+export type UpdateStoreContactInput = z.infer<typeof updateStoreContactSchema>;
+
+export const updateProfileSchema = z.object({
+  fullName: z.string().min(2, "Ism kamida 2 ta belgidan iborat bo'lishi kerak"),
+});
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Joriy parolni kiriting"),
+  newPassword: z.string().min(6, "Yangi parol kamida 6 ta belgidan iborat bo'lishi kerak"),
+});
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 
 export const placeOrderSchema = z.object({
   items: z.array(cartItemSchema).min(1, "Kamida bitta mahsulot tanlang"),

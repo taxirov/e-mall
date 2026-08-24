@@ -7,12 +7,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const store = session.user.storeId
-    ? await prisma.store.findUnique({ where: { id: session.user.storeId }, select: { name: true } })
-    : null;
+  const [store, user] = await Promise.all([
+    session.user.storeId
+      ? prisma.store.findUnique({ where: { id: session.user.storeId }, select: { name: true } })
+      : null,
+    prisma.user.findUnique({ where: { id: session.user.id }, select: { fullName: true } }),
+  ]);
 
   return (
-    <DashboardShell role={session.user.role} storeName={store?.name} userName={session.user.name ?? ""}>
+    <DashboardShell role={session.user.role} storeName={store?.name} userName={user?.fullName ?? ""}>
       {children}
     </DashboardShell>
   );

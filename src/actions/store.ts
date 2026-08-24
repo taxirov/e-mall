@@ -3,31 +3,19 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/authz";
-import { updateStoreSettingsSchema } from "@/lib/validations";
+import { updateStoreIdentitySchema, updateStoreContactSchema } from "@/lib/validations";
 import { isReservedSlug } from "@/lib/domain";
 import { canonicalizeLatin } from "@/lib/canonical-name";
 import type { ActionResult } from "./auth";
 
-export async function updateStoreSettings(input: unknown): Promise<ActionResult<{ slug: string }>> {
+export async function updateStoreIdentity(input: unknown): Promise<ActionResult<{ slug: string }>> {
   const session = await requireRole(["OWNER"]);
   const storeId = session.user.storeId;
   if (!storeId) return { ok: false, error: "Do'kon topilmadi" };
 
-  const parsed = updateStoreSettingsSchema.safeParse(input);
+  const parsed = updateStoreIdentitySchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Xatolik" };
-  const {
-    name,
-    description,
-    slug,
-    logoUrl,
-    bannerUrl,
-    address,
-    locationUrl,
-    workingHours,
-    contactPhone,
-    instagramUrl,
-    telegramUrl,
-  } = parsed.data;
+  const { name, description, slug, logoUrl, bannerUrl } = parsed.data;
 
   if (isReservedSlug(slug)) {
     return { ok: false, error: "Bu subdomen band, boshqasini tanlang" };
@@ -46,6 +34,27 @@ export async function updateStoreSettings(input: unknown): Promise<ActionResult<
       slug,
       logoUrl: logoUrl || null,
       bannerUrl: bannerUrl || null,
+    },
+  });
+
+  revalidatePath("/dashboard/owner");
+  revalidatePath("/dashboard/owner/settings");
+  revalidatePath("/store/[slug]", "layout");
+  return { ok: true, data: { slug } };
+}
+
+export async function updateStoreContact(input: unknown): Promise<ActionResult> {
+  const session = await requireRole(["OWNER"]);
+  const storeId = session.user.storeId;
+  if (!storeId) return { ok: false, error: "Do'kon topilmadi" };
+
+  const parsed = updateStoreContactSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Xatolik" };
+  const { address, locationUrl, workingHours, contactPhone, instagramUrl, telegramUrl } = parsed.data;
+
+  await prisma.store.update({
+    where: { id: storeId },
+    data: {
       address: address || null,
       locationUrl: locationUrl || null,
       workingHours: workingHours || null,
@@ -55,8 +64,7 @@ export async function updateStoreSettings(input: unknown): Promise<ActionResult<
     },
   });
 
-  revalidatePath("/dashboard/owner");
   revalidatePath("/dashboard/owner/settings");
   revalidatePath("/store/[slug]", "layout");
-  return { ok: true, data: { slug } };
+  return { ok: true, data: undefined };
 }

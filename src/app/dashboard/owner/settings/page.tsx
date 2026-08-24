@@ -1,28 +1,33 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { StoreSettingsForm } from "@/components/store-settings-form";
+import { OwnerSettings } from "@/components/owner-settings";
 
 export default async function StoreSettingsPage() {
   const session = await auth();
   if (!session?.user?.storeId) redirect("/login");
 
-  const store = await prisma.store.findUnique({ where: { id: session.user.storeId } });
-  if (!store) redirect("/login");
+  const [store, user] = await Promise.all([
+    prisma.store.findUnique({ where: { id: session.user.storeId } }),
+    prisma.user.findUnique({ where: { id: session.user.id }, select: { fullName: true, phone: true } }),
+  ]);
+  if (!store || !user) redirect("/login");
 
   return (
-    <StoreSettingsForm
-      initialName={store.name}
-      initialDescription={store.description ?? ""}
-      initialSlug={store.slug}
-      initialLogoUrl={store.logoUrl}
-      initialBannerUrl={store.bannerUrl}
-      initialAddress={store.address ?? ""}
-      initialLocationUrl={store.locationUrl ?? ""}
-      initialWorkingHours={store.workingHours ?? ""}
-      initialContactPhone={store.contactPhone}
-      initialInstagramUrl={store.instagramUrl ?? ""}
-      initialTelegramUrl={store.telegramUrl ?? ""}
+    <OwnerSettings
+      userFullName={user.fullName}
+      userPhone={user.phone}
+      storeName={store.name}
+      storeDescription={store.description ?? ""}
+      storeSlug={store.slug}
+      storeLogoUrl={store.logoUrl}
+      storeBannerUrl={store.bannerUrl}
+      storeAddress={store.address ?? ""}
+      storeLocationUrl={store.locationUrl ?? ""}
+      storeWorkingHours={store.workingHours ?? ""}
+      storeContactPhone={store.contactPhone}
+      storeInstagramUrl={store.instagramUrl ?? ""}
+      storeTelegramUrl={store.telegramUrl ?? ""}
     />
   );
 }
