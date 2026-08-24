@@ -109,10 +109,21 @@ export const productSchema = z
     expiryDate: z.string().optional().nullable(),
     supplier: z.string().optional().nullable(),
     isPublished: z.coerce.boolean().default(false),
+    isNew: z.coerce.boolean().default(false),
+    discountPrice: z.coerce.number().positive("Chegirma narxi musbat bo'lishi kerak").optional().nullable(),
+    discountEndsAt: z.string().optional().nullable(),
   })
   .refine((data) => Boolean(data.catalogProductId) !== Boolean(data.newCatalogProduct), {
     message: "Mavjud mahsulotni tanlang yoki yangisini yarating",
     path: ["catalogProductId"],
+  })
+  .refine((data) => !data.discountPrice || data.discountPrice < data.price, {
+    message: "Chegirma narxi asosiy narxdan kichik bo'lishi kerak",
+    path: ["discountPrice"],
+  })
+  .refine((data) => !data.discountPrice || Boolean(data.discountEndsAt), {
+    message: "Chegirma tugash vaqtini kiriting",
+    path: ["discountEndsAt"],
   });
 export type ProductInput = z.infer<typeof productSchema>;
 

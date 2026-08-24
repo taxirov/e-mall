@@ -12,6 +12,9 @@ export default async function StorefrontPage({ params }: { params: Promise<{ slu
       id: true,
       price: true,
       stock: true,
+      isNew: true,
+      discountPrice: true,
+      discountEndsAt: true,
       catalogProduct: { select: { name: true, size: true, imageUrl: true, category: true } },
     },
   });
@@ -32,6 +35,9 @@ export default async function StorefrontPage({ params }: { params: Promise<{ slu
         stock: p.stock,
         categoryId: p.catalogProduct.category.id,
         imageUrl: p.catalogProduct.imageUrl,
+        isNew: p.isNew,
+        discountPrice: p.discountPrice?.toString() ?? null,
+        discountEndsAt: p.discountEndsAt?.toISOString() ?? null,
       }))}
       categories={Array.from(categoriesById.values()).sort((a, b) => a.name.localeCompare(b.name))}
     />

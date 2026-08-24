@@ -56,6 +56,9 @@ export async function createProduct(input: unknown): Promise<ActionResult> {
         lowStockThreshold: data.lowStockThreshold,
         expiryDate,
         isPublished: data.isPublished,
+        isNew: data.isNew,
+        discountPrice: data.discountPrice,
+        discountEndsAt: data.discountEndsAt ? new Date(data.discountEndsAt) : null,
       },
     });
 
@@ -92,12 +95,13 @@ export async function updateProduct(productId: string, input: unknown): Promise<
   const existing = await prisma.product.findFirst({ where: { id: productId, storeId } });
   if (!existing) return { ok: false, error: "Mahsulot topilmadi" };
 
-  const { sku, price, costPrice, stock, lowStockThreshold, isPublished } = parsed.data;
+  const { sku, price, costPrice, stock, lowStockThreshold, isPublished, isNew, discountPrice } = parsed.data;
   const expiryDate = parsed.data.expiryDate ? new Date(parsed.data.expiryDate) : null;
+  const discountEndsAt = parsed.data.discountEndsAt ? new Date(parsed.data.discountEndsAt) : null;
 
   await prisma.product.update({
     where: { id: productId },
-    data: { sku, price, costPrice, stock, lowStockThreshold, expiryDate, isPublished },
+    data: { sku, price, costPrice, stock, lowStockThreshold, expiryDate, isPublished, isNew, discountPrice, discountEndsAt },
   });
 
   if (stock !== existing.stock) {

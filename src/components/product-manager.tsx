@@ -19,6 +19,7 @@ import { ImageUpload } from "@/components/image-upload";
 import { CatalogFields, type ProductAttributeDef } from "@/components/catalog-fields";
 import { BarcodeLabelDialog } from "@/components/barcode-label-dialog";
 import { formatSom } from "@/lib/format";
+import { isDiscountActive } from "@/lib/effective-price";
 import {
   Dialog,
   DialogContent,
@@ -38,6 +39,9 @@ type Product = {
   lowStockThreshold: number | null;
   expiryDate: string | null;
   isPublished: boolean;
+  isNew: boolean;
+  discountPrice: string | null;
+  discountEndsAt: string | null;
   catalogProduct: {
     id: string;
     name: string;
@@ -104,6 +108,9 @@ export function ProductManager({
       expiryDate: (formData.get("expiryDate") as string) || null,
       supplier: (formData.get("supplier") as string) || null,
       isPublished: formData.get("isPublished") === "on",
+      isNew: formData.get("isNew") === "on",
+      discountPrice: formData.get("discountPrice") || null,
+      discountEndsAt: (formData.get("discountEndsAt") as string) || null,
     };
 
     startTransition(async () => {
@@ -300,9 +307,37 @@ export function ProductManager({
                       <Input id="supplier" name="supplier" />
                     </div>
                   )}
-                  <div className="flex items-center gap-2">
-                    <Switch id="isPublished" name="isPublished" defaultChecked={editing?.isPublished} />
-                    <Label htmlFor="isPublished">Onlayn vitrinada ko&apos;rsatish</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="discountPrice">Chegirma narxi (ixtiyoriy)</Label>
+                      <Input
+                        id="discountPrice"
+                        name="discountPrice"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        defaultValue={editing?.discountPrice ?? ""}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="discountEndsAt">Chegirma tugash vaqti</Label>
+                      <Input
+                        id="discountEndsAt"
+                        name="discountEndsAt"
+                        type="datetime-local"
+                        defaultValue={editing?.discountEndsAt ? editing.discountEndsAt.slice(0, 16) : ""}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <Switch id="isPublished" name="isPublished" defaultChecked={editing?.isPublished} />
+                      <Label htmlFor="isPublished">Onlayn vitrinada ko&apos;rsatish</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Switch id="isNew" name="isNew" defaultChecked={editing?.isNew} />
+                      <Label htmlFor="isNew">Yangilik</Label>
+                    </div>
                   </div>
                   <DialogFooter>
                     <Button type="submit" disabled={pending}>
@@ -332,6 +367,7 @@ export function ProductManager({
           <TableBody>
             {initialProducts.map((p) => {
               const lowStock = p.lowStockThreshold != null && p.stock <= p.lowStockThreshold;
+              const discountActive = isDiscountActive(p.discountPrice ? Number(p.discountPrice) : null, p.discountEndsAt);
               return (
                 <TableRow key={p.id}>
                   <TableCell>
@@ -343,11 +379,27 @@ export function ProductManager({
                     </div>
                   </TableCell>
                   <TableCell className="font-medium">
-                    {p.catalogProduct.name}
-                    {p.catalogProduct.size ? `, ${p.catalogProduct.size}` : ""}
+                    <div className="flex items-center gap-1.5">
+                      {p.catalogProduct.name}
+                      {p.catalogProduct.size ? `, ${p.catalogProduct.size}` : ""}
+                      {p.isNew && (
+                        <Badge variant="default" className="bg-brand text-brand-foreground">
+                          Yangilik
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{p.catalogProduct.categoryName}</TableCell>
-                  <TableCell>{formatSom(p.price)} so&apos;m</TableCell>
+                  <TableCell>
+                    {discountActive ? (
+                      <div className="flex flex-col">
+                        <span className="text-xs text-muted-foreground line-through">{formatSom(p.price)} so&apos;m</span>
+                        <span className="font-medium text-destructive">{formatSom(p.discountPrice!)} so&apos;m</span>
+                      </div>
+                    ) : (
+                      `${formatSom(p.price)} so'm`
+                    )}
+                  </TableCell>
                   <TableCell>
                     {p.stock}
                     {lowStock && (

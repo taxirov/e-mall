@@ -17,8 +17,11 @@ export default async function PosPage() {
       id: true,
       price: true,
       stock: true,
+      isNew: true,
+      discountPrice: true,
+      discountEndsAt: true,
       catalogProduct: {
-        select: { name: true, size: true, imageUrl: true, category: { select: { id: true, name: true } } },
+        select: { name: true, size: true, imageUrl: true, barcode: true, category: { select: { id: true, name: true } } },
       },
     },
   });
@@ -38,6 +41,10 @@ export default async function PosPage() {
         stock: p.stock,
         categoryId: p.catalogProduct.category.id,
         imageUrl: p.catalogProduct.imageUrl,
+        barcode: p.catalogProduct.barcode,
+        isNew: p.isNew,
+        discountPrice: p.discountPrice?.toString() ?? null,
+        discountEndsAt: p.discountEndsAt?.toISOString() ?? null,
       }))}
     />
   );

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireStoreMember } from "@/lib/authz";
 import { saleSchema } from "@/lib/validations";
 import { computeDiscount } from "@/lib/discount";
+import { getEffectivePrice } from "@/lib/effective-price";
 import { broadcastToStore } from "@/lib/realtime";
 import type { ActionResult } from "./auth";
 
@@ -44,10 +45,16 @@ export async function createSale(
     if (product.stock < item.qty) return { ok: false, error: `"${product.catalogProduct.name}" uchun qoldiq yetarli emas` };
   }
 
-  const subtotal = items.reduce((sum, item) => {
-    const product = productMap.get(item.productId)!;
-    return sum + Number(product.price) * item.qty;
-  }, 0);
+  function priceFor(productId: string): number {
+    const product = productMap.get(productId)!;
+    return getEffectivePrice(
+      Number(product.price),
+      product.discountPrice ? Number(product.discountPrice) : null,
+      product.discountEndsAt
+    );
+  }
+
+  const subtotal = items.reduce((sum, item) => sum + priceFor(item.productId) * item.qty, 0);
 
   let couponId: string | null = null;
   let discountAmount = 0;
@@ -82,7 +89,7 @@ export async function createSale(
           create: items.map((item) => ({
             productId: item.productId,
             qty: item.qty,
-            priceAtSale: productMap.get(item.productId)!.price,
+            priceAtSale: priceFor(item.productId),
           })),
         },
       },
@@ -130,7 +137,7 @@ export async function createSale(
     items: items.map((item) => ({
       name: productMap.get(item.productId)!.catalogProduct.name,
       qty: item.qty,
-      price: Number(productMap.get(item.productId)!.price),
+      price: priceFor(item.productId),
     })),
     subtotal,
     discountAmount,

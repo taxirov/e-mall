@@ -2,20 +2,34 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { ShoppingCart, Plus, Minus, Trash2, Banknote, CreditCard, X, Tag } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Banknote, CreditCard, X, Tag, ScanLine, Sparkles } from "lucide-react";
 import { createSale, type ReceiptData } from "@/actions/pos";
 import { validateCoupon } from "@/actions/coupons";
 import { computeDiscount } from "@/lib/discount";
+import { getEffectivePrice, isDiscountActive } from "@/lib/effective-price";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { ReceiptDialog } from "@/components/receipt-dialog";
+import { BarcodeScannerDialog } from "@/components/barcode-scanner-dialog";
 import { cn } from "@/lib/utils";
 import { useRealtime } from "@/hooks/use-realtime";
-import { formatSom } from "@/lib/format";
+import { formatSom, formatDateTime } from "@/lib/format";
 
-type Product = { id: string; name: string; price: string; stock: number; categoryId: string | null; imageUrl: string | null };
+type Product = {
+  id: string;
+  name: string;
+  price: string;
+  stock: number;
+  categoryId: string | null;
+  imageUrl: string | null;
+  barcode: string | null;
+  isNew: boolean;
+  discountPrice: string | null;
+  discountEndsAt: string | null;
+};
 type Category = { id: string; name: string };
 type CartLine = { productId: string; name: string; price: number; qty: number; maxStock: number };
 type AppliedCoupon = { code: string; type: "PERCENT" | "FIXED"; value: number };
@@ -39,6 +53,7 @@ export function PosScreen({
   ]);
   const [activeTabId, setActiveTabId] = useState("tab-1");
   const [cartOpen, setCartOpen] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [couponPending, startCouponTransition] = useTransition();
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
@@ -83,11 +98,26 @@ export function PosScreen({
         return { ...tab, lines: tab.lines.map((l) => (l.productId === product.id ? { ...l, qty: l.qty + 1 } : l)) };
       }
       if (product.stock < 1) return tab;
+      const price = getEffectivePrice(
+        Number(product.price),
+        product.discountPrice ? Number(product.discountPrice) : null,
+        product.discountEndsAt
+      );
       return {
         ...tab,
-        lines: [...tab.lines, { productId: product.id, name: product.name, price: Number(product.price), qty: 1, maxStock: product.stock }],
+        lines: [...tab.lines, { productId: product.id, name: product.name, price, qty: 1, maxStock: product.stock }],
       };
     });
+  }
+
+  function handleBarcodeScanned(code: string) {
+    const product = products.find((p) => p.barcode === code);
+    if (!product) {
+      toast.error("Bu shtrix-kodli mahsulot topilmadi");
+      return;
+    }
+    addToCart(product);
+    toast.success(product.name);
   }
 
   function changeQty(productId: string, delta: number) {
@@ -225,39 +255,69 @@ export function PosScreen({
           </div>
         )}
 
-        <Input
-          placeholder="Mahsulot qidirish..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="mb-4"
-        />
+        <div className="mb-4 flex gap-2">
+          <Input
+            placeholder="Mahsulot qidirish..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="flex-1"
+          />
+          <Button type="button" variant="outline" size="icon" onClick={() => setScannerOpen(true)} title="Shtrix-kod skanerlash">
+            <ScanLine className="size-4" />
+          </Button>
+        </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {filtered.map((product) => (
-            <button key={product.id} type="button" onClick={() => addToCart(product)} className="text-left">
-              <Card className="h-full overflow-hidden transition-all hover:border-brand hover:shadow-md active:scale-[0.98]">
-                {product.imageUrl ? (
-                  <div className="aspect-square overflow-hidden bg-muted">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={product.imageUrl} alt="" className="size-full object-cover" />
+          {filtered.map((product) => {
+            const discountActive = isDiscountActive(
+              product.discountPrice ? Number(product.discountPrice) : null,
+              product.discountEndsAt
+            );
+            return (
+              <button key={product.id} type="button" onClick={() => addToCart(product)} className="text-left">
+                <Card className="h-full overflow-hidden transition-all hover:border-brand hover:shadow-md active:scale-[0.98]">
+                  <div className="relative">
+                    {product.imageUrl ? (
+                      <div className="aspect-square overflow-hidden bg-muted">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={product.imageUrl} alt="" className="size-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="flex aspect-square items-center justify-center bg-muted">
+                        <ShoppingCart className="size-6 text-muted-foreground" />
+                      </div>
+                    )}
+                    {product.isNew && (
+                      <Badge className="absolute top-1.5 left-1.5 gap-1 bg-brand text-brand-foreground">
+                        <Sparkles className="size-3" /> Yangilik
+                      </Badge>
+                    )}
                   </div>
-                ) : (
-                  <div className="flex aspect-square items-center justify-center bg-muted">
-                    <ShoppingCart className="size-6 text-muted-foreground" />
-                  </div>
-                )}
-                <CardContent className="p-3">
-                  <p className="line-clamp-2 text-sm font-medium">{product.name}</p>
-                  <p className="mt-1 text-sm font-semibold text-brand">{formatSom(product.price)} so&apos;m</p>
-                  <p className="text-xs text-muted-foreground">Qoldiq: {product.stock}</p>
-                </CardContent>
-              </Card>
-            </button>
-          ))}
+                  <CardContent className="p-3">
+                    <p className="line-clamp-2 text-sm font-medium">{product.name}</p>
+                    {discountActive ? (
+                      <>
+                        <div className="mt-1 flex items-center gap-1.5">
+                          <span className="text-xs text-muted-foreground line-through">{formatSom(product.price)}</span>
+                          <span className="text-sm font-semibold text-destructive">{formatSom(product.discountPrice!)} so&apos;m</span>
+                        </div>
+                        <p className="text-[11px] text-destructive">{formatDateTime(product.discountEndsAt!)} gacha</p>
+                      </>
+                    ) : (
+                      <p className="mt-1 text-sm font-semibold text-brand">{formatSom(product.price)} so&apos;m</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">Qoldiq: {product.stock}</p>
+                  </CardContent>
+                </Card>
+              </button>
+            );
+          })}
           {filtered.length === 0 && (
             <p className="col-span-full text-sm text-muted-foreground">Mahsulot topilmadi</p>
           )}
         </div>
       </div>
+
+      <BarcodeScannerDialog open={scannerOpen} onOpenChange={setScannerOpen} onDetected={handleBarcodeScanned} />
 
       {/* Desktop billing panel */}
       <div className="hidden w-80 shrink-0 md:block">

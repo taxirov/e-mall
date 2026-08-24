@@ -37,6 +37,9 @@ export default async function ProductsPage() {
         lowStockThreshold: p.lowStockThreshold,
         expiryDate: p.expiryDate?.toISOString() ?? null,
         isPublished: p.isPublished,
+        isNew: p.isNew,
+        discountPrice: p.discountPrice?.toString() ?? null,
+        discountEndsAt: p.discountEndsAt?.toISOString() ?? null,
         catalogProduct: {
           id: p.catalogProduct.id,
           name: p.catalogProduct.name,

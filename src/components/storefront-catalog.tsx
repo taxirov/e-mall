@@ -2,17 +2,29 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ShoppingCart, Plus, Minus, Trash2, PackageSearch, Search } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, PackageSearch, Search, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/hooks/use-cart";
-import { formatSom } from "@/lib/format";
+import { formatSom, formatDateTime } from "@/lib/format";
+import { getEffectivePrice, isDiscountActive } from "@/lib/effective-price";
 import { ONLINE_ORDERING_ENABLED } from "@/lib/config";
 
-type Product = { id: string; name: string; price: string; stock: number; categoryId: string | null; imageUrl: string | null };
+type Product = {
+  id: string;
+  name: string;
+  price: string;
+  stock: number;
+  categoryId: string | null;
+  imageUrl: string | null;
+  isNew: boolean;
+  discountPrice: string | null;
+  discountEndsAt: string | null;
+};
 type Category = { id: string; name: string };
 
 export function StorefrontCatalog({
@@ -92,36 +104,60 @@ export function StorefrontCatalog({
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-          {filtered.map((product) => (
-            <Card key={product.id} className="overflow-hidden transition-shadow hover:shadow-md">
-              <div className="aspect-square overflow-hidden bg-muted">
-                {product.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={product.imageUrl} alt={product.name} className="size-full object-cover" />
-                ) : (
-                  <div className="flex size-full items-center justify-center">
-                    <PackageSearch className="size-6 text-muted-foreground" />
-                  </div>
-                )}
-              </div>
-              <CardContent className="p-3">
-                <p className="line-clamp-2 text-sm font-medium">{product.name}</p>
-                <p className="mt-1 text-sm font-semibold text-brand">{formatSom(product.price)} so&apos;m</p>
-                <p className="text-xs text-muted-foreground">Qoldiq: {product.stock}</p>
-                {ONLINE_ORDERING_ENABLED && (
-                  <Button
-                    size="sm"
-                    className="mt-2 w-full bg-brand text-brand-foreground hover:bg-brand/90"
-                    onClick={() =>
-                      addToCart({ id: product.id, name: product.name, price: Number(product.price), stock: product.stock })
-                    }
-                  >
-                    Savatga qo&apos;shish
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+          {filtered.map((product) => {
+            const discountActive = isDiscountActive(
+              product.discountPrice ? Number(product.discountPrice) : null,
+              product.discountEndsAt
+            );
+            const effectivePrice = getEffectivePrice(
+              Number(product.price),
+              product.discountPrice ? Number(product.discountPrice) : null,
+              product.discountEndsAt
+            );
+            return (
+              <Card key={product.id} className="overflow-hidden transition-shadow hover:shadow-md">
+                <div className="relative aspect-square overflow-hidden bg-muted">
+                  {product.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={product.imageUrl} alt={product.name} className="size-full object-cover" />
+                  ) : (
+                    <div className="flex size-full items-center justify-center">
+                      <PackageSearch className="size-6 text-muted-foreground" />
+                    </div>
+                  )}
+                  {product.isNew && (
+                    <Badge className="absolute top-1.5 left-1.5 gap-1 bg-brand text-brand-foreground">
+                      <Sparkles className="size-3" /> Yangilik
+                    </Badge>
+                  )}
+                </div>
+                <CardContent className="p-3">
+                  <p className="line-clamp-2 text-sm font-medium">{product.name}</p>
+                  {discountActive ? (
+                    <>
+                      <div className="mt-1 flex items-center gap-1.5">
+                        <span className="text-xs text-muted-foreground line-through">{formatSom(product.price)}</span>
+                        <span className="text-sm font-semibold text-destructive">{formatSom(effectivePrice)} so&apos;m</span>
+                      </div>
+                      <p className="text-[11px] text-destructive">{formatDateTime(product.discountEndsAt!)} gacha</p>
+                    </>
+                  ) : (
+                    <p className="mt-1 text-sm font-semibold text-brand">{formatSom(product.price)} so&apos;m</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">Qoldiq: {product.stock}</p>
+                  {ONLINE_ORDERING_ENABLED && (
+                    <Button
+                      size="sm"
+                      className="mt-2 w-full bg-brand text-brand-foreground hover:bg-brand/90"
+                      onClick={() => addToCart({ id: product.id, name: product.name, price: effectivePrice, stock: product.stock })}
+                    >
+                      Savatga qo&apos;shish
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
