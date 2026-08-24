@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, Send, Barcode } from "lucide-react";
+import { Plus, Trash2, Pencil, Send, Barcode, QrCode } from "lucide-react";
 import { createProduct, updateProduct, deleteProduct } from "@/actions/products";
 import { updateCatalogProduct, requestProductEdit, type CatalogProductSearchResult } from "@/actions/catalog-products";
 import { collectAttributeValues } from "@/lib/collect-attribute-values";
@@ -18,6 +18,7 @@ import { type CategoryTreeNode } from "@/components/category-select";
 import { ImageUpload } from "@/components/image-upload";
 import { CatalogFields, type ProductAttributeDef } from "@/components/catalog-fields";
 import { BarcodeLabelDialog } from "@/components/barcode-label-dialog";
+import { MxikQrDialog } from "@/components/mxik-qr-dialog";
 import { formatSom } from "@/lib/format";
 import { isDiscountActive } from "@/lib/effective-price";
 import {
@@ -81,6 +82,7 @@ export function ProductManager({
   const [selectedCatalog, setSelectedCatalog] = useState<CatalogProductSearchResult | null>(null);
   const [requestTarget, setRequestTarget] = useState<Product | null>(null);
   const [labelTarget, setLabelTarget] = useState<Product | null>(null);
+  const [qrTarget, setQrTarget] = useState<Product | null>(null);
 
   function resetDialog() {
     setEditing(null);
@@ -418,6 +420,11 @@ export function ProductManager({
                         <Barcode className="size-4" />
                       </Button>
                     )}
+                    {p.catalogProduct.mxikCode && (
+                      <Button size="icon" variant="ghost" onClick={() => setQrTarget(p)} title="MXIK QR kodini chop etish">
+                        <QrCode className="size-4" />
+                      </Button>
+                    )}
                     <Button
                       size="icon"
                       variant="ghost"
@@ -511,6 +518,14 @@ export function ProductManager({
           onOpenChange={(open) => !open && setLabelTarget(null)}
           productName={labelTarget.catalogProduct.name}
           barcode={labelTarget.catalogProduct.barcode!}
+        />
+      )}
+      {qrTarget && (
+        <MxikQrDialog
+          open={!!qrTarget}
+          onOpenChange={(open) => !open && setQrTarget(null)}
+          productName={qrTarget.catalogProduct.name}
+          mxikCode={qrTarget.catalogProduct.mxikCode!}
         />
       )}
     </div>
