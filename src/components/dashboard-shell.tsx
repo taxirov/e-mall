@@ -8,8 +8,6 @@ import { Menu, LayoutDashboard, Package, Users, ClipboardList, ShoppingCart, Set
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { DashboardNotifications } from "@/components/dashboard-notifications";
-import { ScriptToggle } from "@/components/script-toggle";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { NotificationsProvider } from "@/contexts/notifications-context";
 import { signOutAction } from "@/actions/session";
 import { cn } from "@/lib/utils";
@@ -97,10 +95,6 @@ export function DashboardShell({
             <DashboardNotifications />
           </div>
           {storeName && <p className="mb-4 truncate text-xs text-muted-foreground">{storeName}</p>}
-          <div className="mb-4 flex flex-wrap items-center gap-2">
-            <ScriptToggle />
-            <ThemeToggle />
-          </div>
           {nav}
           <form action={signOutAction} className="mt-auto pt-4">
             <Button type="submit" variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground">
@@ -116,8 +110,6 @@ export function DashboardShell({
             e-mall.uz
           </div>
           <div className="flex items-center gap-2">
-            <ScriptToggle />
-            <ThemeToggle />
             <DashboardNotifications />
             <Sheet open={open} onOpenChange={setOpen}>
               <SheetTrigger render={<Button variant="outline" size="icon" />}>
