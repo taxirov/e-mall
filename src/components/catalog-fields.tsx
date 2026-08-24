@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CategorySelect, type CategoryTreeNode } from "@/components/category-select";
 import { ImageUpload } from "@/components/image-upload";
 import { BarcodeLookup } from "@/components/barcode-lookup";
+import { CyrillicButton } from "@/components/cyrillic-button";
 import type { SoliqLookupResult } from "@/lib/soliq";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UNIT_OPTIONS } from "@/lib/validations";
@@ -80,7 +81,10 @@ export function CatalogFields({
       <input type="hidden" name="mxikCode" value={soliq.mxikCode} />
       <div className="space-y-2">
         <Label htmlFor="name">Nomi</Label>
-        <Input id="name" name="name" value={name} onChange={(e) => setName(e.target.value)} required />
+        <div className="flex gap-2">
+          <Input id="name" name="name" value={name} onChange={(e) => setName(e.target.value)} required className="flex-1" />
+          <CyrillicButton text={name} onConverted={setName} />
+        </div>
       </div>
       <CategorySelect categories={categories} defaultCategoryId={defaults?.categoryId} />
       <div className="grid grid-cols-2 gap-3">
