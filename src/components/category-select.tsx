@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/searchable-select";
 
 export type CategoryTreeNode = { id: string; name: string; parentId: string | null };
 
@@ -32,39 +32,27 @@ export function CategorySelect({
     <div className="space-y-3">
       <div className="space-y-2">
         <Label htmlFor="categoryId-parent">Kategoriya</Label>
-        <Select
+        <SearchableSelect
+          id="categoryId-parent"
+          options={topLevel}
           value={parentId}
-          onValueChange={(value) => {
-            setParentId(value ?? "");
+          onChange={(id) => {
+            setParentId(id);
             setChildId("");
           }}
-        >
-          <SelectTrigger id="categoryId-parent" className="w-full">
-            <SelectValue placeholder="Kategoriya tanlang" />
-          </SelectTrigger>
-          <SelectContent>
-            {topLevel.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          placeholder="Kategoriya qidiring..."
+        />
       </div>
       <div className="space-y-2">
         <Label htmlFor="categoryId-child">Sub-kategoriya</Label>
-        <Select value={childId} onValueChange={(value) => setChildId(value ?? "")} disabled={children.length === 0}>
-          <SelectTrigger id="categoryId-child" className="w-full">
-            <SelectValue placeholder={children.length === 0 ? "—" : "Sub-kategoriya tanlang"} />
-          </SelectTrigger>
-          <SelectContent>
-            {children.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <SearchableSelect
+          id="categoryId-child"
+          options={children}
+          value={childId}
+          onChange={setChildId}
+          placeholder="Sub-kategoriya qidiring..."
+          disabled={children.length === 0}
+        />
       </div>
       <input type="hidden" name={name} value={selectedId} required={required} />
     </div>
