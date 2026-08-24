@@ -41,13 +41,16 @@ export async function searchCatalogProducts(query: string): Promise<CatalogProdu
   await requireStoreMember();
   const trimmed = query.trim();
   if (trimmed.length < 2) return [];
+  // Names are stored canonically in Latin — convert a Cyrillic-typed query
+  // before matching, otherwise it can never find anything.
+  const searchTerm = await canonicalizeLatin(trimmed);
 
   const items = await prisma.catalogProduct.findMany({
     where: {
       OR: [
-        { name: { contains: trimmed, mode: "insensitive" } },
-        { brand: { contains: trimmed, mode: "insensitive" } },
-        { barcode: { contains: trimmed } },
+        { name: { contains: searchTerm, mode: "insensitive" } },
+        { brand: { contains: searchTerm, mode: "insensitive" } },
+        { barcode: { contains: searchTerm } },
       ],
     },
     select: {

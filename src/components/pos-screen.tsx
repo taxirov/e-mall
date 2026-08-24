@@ -16,6 +16,7 @@ import { ReceiptDialog } from "@/components/receipt-dialog";
 import { BarcodeScannerDialog } from "@/components/barcode-scanner-dialog";
 import { cn } from "@/lib/utils";
 import { useRealtime } from "@/hooks/use-realtime";
+import { useLatinizedSearch } from "@/hooks/use-latinized-search";
 import { formatSom, formatDateTime } from "@/lib/format";
 
 type Product = {
@@ -68,14 +69,15 @@ export function PosScreen({
 
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? tabs[0];
 
+  const searchTerm = useLatinizedSearch(search);
   const filtered = useMemo(
     () =>
       products.filter((p) => {
-        const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
+        const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesCategory = !activeCategory || p.categoryId === activeCategory;
         return matchesSearch && matchesCategory;
       }),
-    [products, search, activeCategory]
+    [products, searchTerm, activeCategory]
   );
 
   const subtotal = activeTab.lines.reduce((sum, line) => sum + line.price * line.qty, 0);

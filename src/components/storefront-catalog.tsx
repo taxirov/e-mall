@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/hooks/use-cart";
+import { useLatinizedSearch } from "@/hooks/use-latinized-search";
 import { formatSom, formatDateTime } from "@/lib/format";
 import { getEffectivePrice, isDiscountActive } from "@/lib/effective-price";
 import { ONLINE_ORDERING_ENABLED } from "@/lib/config";
@@ -41,14 +42,15 @@ export function StorefrontCatalog({
   const [cartOpen, setCartOpen] = useState(false);
   const { cart, addToCart, changeQty, removeLine, total, itemCount } = useCart(storeSlug);
 
+  const searchTerm = useLatinizedSearch(search);
   const filtered = useMemo(
     () =>
       initialProducts.filter(
         (p) =>
-          p.name.toLowerCase().includes(search.toLowerCase()) &&
+          p.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
           (!activeCategory || p.categoryId === activeCategory)
       ),
-    [initialProducts, search, activeCategory]
+    [initialProducts, searchTerm, activeCategory]
   );
 
   return (
