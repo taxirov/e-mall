@@ -3,6 +3,7 @@ import Image from "next/image";
 import { headers } from "next/headers";
 import { auth, signOut } from "@/auth";
 import { Button } from "@/components/ui/button";
+import { ScriptToggle } from "@/components/script-toggle";
 import { appOrigin } from "@/lib/domain";
 
 export async function SiteHeader() {
@@ -13,13 +14,14 @@ export async function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2 font-semibold">
+        <Link href="/" data-no-transliterate className="flex items-center gap-2 font-semibold">
           <Image src="/logo-96.png" alt="" width={28} height={28} className="rounded-md" priority />
           e-mall.uz
         </Link>
 
         {session?.user ? (
           <div className="flex items-center gap-2">
+            <ScriptToggle className="hidden sm:flex" />
             <Button render={<Link href={`${appUrl}${dashboardPathFor(session.user.role)}`} />} nativeButton={false} variant="ghost" size="sm">
               Boshqaruv paneli
             </Button>
@@ -36,6 +38,7 @@ export async function SiteHeader() {
           </div>
         ) : (
           <div className="flex items-center gap-2">
+            <ScriptToggle className="hidden sm:flex" />
             <Button render={<Link href={`${appUrl}/login`} />} nativeButton={false} variant="ghost" size="sm">
               Kirish
             </Button>

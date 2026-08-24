@@ -4,6 +4,8 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
+import { ScriptProvider } from "@/contexts/script-context";
+import { ScriptTransliterator } from "@/components/script-transliterator";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -42,9 +44,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-          {children}
-          <Toaster position="top-center" />
-          <ServiceWorkerRegister />
+          <ScriptProvider>
+            {children}
+            <ScriptTransliterator />
+            <Toaster position="top-center" />
+            <ServiceWorkerRegister />
+          </ScriptProvider>
         </ThemeProvider>
       </body>
     </html>

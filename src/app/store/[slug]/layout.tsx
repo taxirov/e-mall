@@ -5,6 +5,7 @@ import { auth, signOut } from "@/auth";
 import { Button } from "@/components/ui/button";
 import { Store, MapPin, Clock, Phone, ExternalLink } from "lucide-react";
 import { ONLINE_ORDERING_ENABLED } from "@/lib/config";
+import { ScriptToggle } from "@/components/script-toggle";
 import { cn } from "@/lib/utils";
 
 export default async function StoreLayout({
@@ -38,6 +39,7 @@ export default async function StoreLayout({
           </Link>
           {session?.user?.role === "CUSTOMER" ? (
             <div className="flex shrink-0 items-center gap-2">
+              <ScriptToggle className="hidden sm:flex" />
               {ONLINE_ORDERING_ENABLED && (
                 <Button render={<Link href="/orders" />} nativeButton={false} variant="ghost" size="sm">
                   Buyurtmalarim
@@ -55,9 +57,12 @@ export default async function StoreLayout({
               </form>
             </div>
           ) : (
-            <Button render={<Link href="/login" />} nativeButton={false} size="sm" variant="outline" className="shrink-0">
-              Kirish
-            </Button>
+            <div className="flex shrink-0 items-center gap-2">
+              <ScriptToggle className="hidden sm:flex" />
+              <Button render={<Link href="/login" />} nativeButton={false} size="sm" variant="outline">
+                Kirish
+              </Button>
+            </div>
           )}
         </div>
       </header>

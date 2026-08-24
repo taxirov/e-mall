@@ -8,6 +8,7 @@ import { Menu, LayoutDashboard, Package, Users, ClipboardList, ShoppingCart, Set
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { DashboardNotifications } from "@/components/dashboard-notifications";
+import { ScriptToggle } from "@/components/script-toggle";
 import { NotificationsProvider } from "@/contexts/notifications-context";
 import { signOutAction } from "@/actions/session";
 import { cn } from "@/lib/utils";
@@ -88,13 +89,14 @@ export function DashboardShell({
       <div className="flex min-h-svh flex-col md:flex-row">
         <aside className="hidden w-56 shrink-0 border-r bg-muted/20 p-4 md:sticky md:top-0 md:flex md:h-svh md:flex-col">
           <div className="mb-6 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 font-semibold">
+            <div data-no-transliterate className="flex items-center gap-2 font-semibold">
               <Image src="/logo-96.png" alt="" width={24} height={24} className="rounded-md" priority />
               e-mall.uz
             </div>
             <DashboardNotifications />
           </div>
           {storeName && <p className="mb-4 truncate text-xs text-muted-foreground">{storeName}</p>}
+          <ScriptToggle className="mb-4 self-start" />
           {nav}
           <form action={signOutAction} className="mt-auto pt-4">
             <Button type="submit" variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground">
@@ -105,11 +107,12 @@ export function DashboardShell({
         </aside>
 
         <header className="flex items-center justify-between border-b p-3 md:hidden">
-          <div className="flex items-center gap-2 font-semibold">
+          <div data-no-transliterate className="flex items-center gap-2 font-semibold">
             <Image src="/logo-96.png" alt="" width={24} height={24} className="rounded-md" priority />
             e-mall.uz
           </div>
           <div className="flex items-center gap-2">
+            <ScriptToggle />
             <DashboardNotifications />
             <Sheet open={open} onOpenChange={setOpen}>
               <SheetTrigger render={<Button variant="outline" size="icon" />}>

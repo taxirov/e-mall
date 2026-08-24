@@ -1,15 +1,17 @@
 "use server";
 
-import { auth } from "@/auth";
 import type { ActionResult } from "./auth";
 
 const API_TOKEN = process.env.MATN_UZ_API_TOKEN;
+// Generous enough for a page's worth of batched UI strings (the site-wide
+// script toggle) while keeping a single request from becoming unbounded —
+// this is a public, unauthenticated endpoint (landing page, storefront).
+const MAX_LENGTH = 20000;
 
-/** Converts Uzbek Latin text to Uzbek Cyrillic via matn.uz. Any signed-in dashboard user can use it — it's a text utility, not a mutation. */
+/** Converts Uzbek Latin text to Uzbek Cyrillic via matn.uz. Public (no auth) — it's a stateless text utility with no database access, used both from dashboard forms and the site-wide script toggle on public pages. */
 export async function transliterateToCyrillic(text: unknown): Promise<ActionResult<string>> {
-  const session = await auth();
-  if (!session?.user) return { ok: false, error: "Tizimga kirish talab qilinadi" };
   if (typeof text !== "string" || !text.trim()) return { ok: false, error: "Matn kiritilmagan" };
+  if (text.length > MAX_LENGTH) return { ok: false, error: "Matn juda uzun" };
   if (!API_TOKEN) return { ok: false, error: "Krilchaga o'tkazish xizmati sozlanmagan" };
 
   try {
