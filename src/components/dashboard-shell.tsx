@@ -25,6 +25,7 @@ const NAV_ITEMS: Record<string, NavItem[]> = {
     { href: "/dashboard/admin/requests", label: "So'rovlar", icon: Send },
     { href: "/dashboard/admin/users", label: "Foydalanuvchilar", icon: Users },
     { href: "/dashboard/notifications", label: "Bildirishnomalar", icon: Bell },
+    { href: "/dashboard/admin/settings", label: "Sozlamalar", icon: Settings },
   ],
   OWNER: [
     { href: "/dashboard/owner", label: "Umumiy ko'rinish", icon: LayoutDashboard },
