@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, Trash2, Pencil, Send, Barcode, QrCode } from "lucide-react";
@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CatalogProductPicker } from "@/components/catalog-product-picker";
 import { type CategoryTreeNode } from "@/components/category-select";
 import { ImageUpload } from "@/components/image-upload";
@@ -21,6 +22,7 @@ import { BarcodeLabelDialog } from "@/components/barcode-label-dialog";
 import { MxikQrDialog } from "@/components/mxik-qr-dialog";
 import { formatSom } from "@/lib/format";
 import { isDiscountActive } from "@/lib/effective-price";
+import { useLatinizedSearch } from "@/hooks/use-latinized-search";
 import {
   Dialog,
   DialogContent,
@@ -83,6 +85,71 @@ export function ProductManager({
   const [requestTarget, setRequestTarget] = useState<Product | null>(null);
   const [labelTarget, setLabelTarget] = useState<Product | null>(null);
   const [qrTarget, setQrTarget] = useState<Product | null>(null);
+
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "published" | "unpublished">("all");
+  const [stockFilter, setStockFilter] = useState<"all" | "low" | "out">("all");
+  const [onlyNew, setOnlyNew] = useState(false);
+  const [onlyDiscount, setOnlyDiscount] = useState(false);
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const searchTerm = useLatinizedSearch(search);
+
+  const categoryOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const p of initialProducts) seen.set(p.catalogProduct.categoryId, p.catalogProduct.categoryName);
+    return Array.from(seen.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [initialProducts]);
+
+  const filteredProducts = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    const min = minPrice ? Number(minPrice) : null;
+    const max = maxPrice ? Number(maxPrice) : null;
+    return initialProducts.filter((p) => {
+      const discountActive = isDiscountActive(p.discountPrice ? Number(p.discountPrice) : null, p.discountEndsAt);
+      if (q) {
+        const haystack = [p.catalogProduct.name, p.catalogProduct.brand ?? "", p.catalogProduct.barcode ?? "", p.sku ?? ""]
+          .join(" ")
+          .toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      if (categoryFilter !== "all" && p.catalogProduct.categoryId !== categoryFilter) return false;
+      if (statusFilter === "published" && !p.isPublished) return false;
+      if (statusFilter === "unpublished" && p.isPublished) return false;
+      if (stockFilter === "out" && p.stock > 0) return false;
+      if (stockFilter === "low" && !(p.lowStockThreshold != null && p.stock > 0 && p.stock <= p.lowStockThreshold)) return false;
+      if (onlyNew && !p.isNew) return false;
+      if (onlyDiscount && !discountActive) return false;
+      const effectivePrice = discountActive ? Number(p.discountPrice) : Number(p.price);
+      if (min != null && effectivePrice < min) return false;
+      if (max != null && effectivePrice > max) return false;
+      return true;
+    });
+  }, [initialProducts, searchTerm, categoryFilter, statusFilter, stockFilter, onlyNew, onlyDiscount, minPrice, maxPrice]);
+
+  const filtersActive =
+    search !== "" ||
+    categoryFilter !== "all" ||
+    statusFilter !== "all" ||
+    stockFilter !== "all" ||
+    onlyNew ||
+    onlyDiscount ||
+    minPrice !== "" ||
+    maxPrice !== "";
+
+  function resetFilters() {
+    setSearch("");
+    setCategoryFilter("all");
+    setStatusFilter("all");
+    setStockFilter("all");
+    setOnlyNew(false);
+    setOnlyDiscount(false);
+    setMinPrice("");
+    setMaxPrice("");
+  }
 
   function resetDialog() {
     setEditing(null);
@@ -353,6 +420,83 @@ export function ProductManager({
         </Dialog>
       </div>
 
+      <div className="space-y-3 rounded-md border p-3">
+        <div className="flex flex-wrap gap-2">
+          <Input
+            placeholder="Qidirish: nomi, brend, shtrix-kod, SKU..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="max-w-xs flex-1"
+          />
+          <Select value={categoryFilter} onValueChange={(v) => v && setCategoryFilter(v)}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Kategoriya" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Barcha kategoriyalar</SelectItem>
+              {categoryOptions.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={(v) => v && setStatusFilter(v as typeof statusFilter)}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Vitrina holati" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Barcha holatlar</SelectItem>
+              <SelectItem value="published">Vitrinada</SelectItem>
+              <SelectItem value="unpublished">Vitrinada emas</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={stockFilter} onValueChange={(v) => v && setStockFilter(v as typeof stockFilter)}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Qoldiq" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Barcha qoldiqlar</SelectItem>
+              <SelectItem value="low">Kam qoldiq</SelectItem>
+              <SelectItem value="out">Tugagan</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            type="number"
+            min="0"
+            placeholder="Narx dan"
+            value={minPrice}
+            onChange={(e) => setMinPrice(e.target.value)}
+            className="w-28"
+          />
+          <span className="text-muted-foreground">—</span>
+          <Input
+            type="number"
+            min="0"
+            placeholder="Narx gacha"
+            value={maxPrice}
+            onChange={(e) => setMaxPrice(e.target.value)}
+            className="w-28"
+          />
+          <Button type="button" size="sm" variant={onlyNew ? "default" : "outline"} onClick={() => setOnlyNew((v) => !v)}>
+            Yangilik
+          </Button>
+          <Button type="button" size="sm" variant={onlyDiscount ? "default" : "outline"} onClick={() => setOnlyDiscount((v) => !v)}>
+            Chegirma
+          </Button>
+          {filtersActive && (
+            <Button type="button" size="sm" variant="ghost" onClick={resetFilters}>
+              Filtrlarni tozalash
+            </Button>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {filteredProducts.length} / {initialProducts.length} mahsulot
+        </p>
+      </div>
+
       <div className="overflow-x-auto rounded-md border">
         <Table>
           <TableHeader>
@@ -367,7 +511,7 @@ export function ProductManager({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {initialProducts.map((p) => {
+            {filteredProducts.map((p) => {
               const lowStock = p.lowStockThreshold != null && p.stock <= p.lowStockThreshold;
               const discountActive = isDiscountActive(p.discountPrice ? Number(p.discountPrice) : null, p.discountEndsAt);
               return (
@@ -447,10 +591,10 @@ export function ProductManager({
                 </TableRow>
               );
             })}
-            {initialProducts.length === 0 && (
+            {filteredProducts.length === 0 && (
               <TableRow>
                 <TableCell colSpan={7} className="text-center text-muted-foreground">
-                  Hozircha mahsulotlar yo&apos;q
+                  {initialProducts.length === 0 ? "Hozircha mahsulotlar yo'q" : "Filtrga mos mahsulot topilmadi"}
                 </TableCell>
               </TableRow>
             )}
