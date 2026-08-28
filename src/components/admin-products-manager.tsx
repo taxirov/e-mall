@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, Barcode, QrCode } from "lucide-react";
@@ -8,10 +8,12 @@ import { createCatalogProductAsAdmin, updateCatalogProduct } from "@/actions/cat
 import { collectAttributeValues } from "@/lib/collect-attribute-values";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CatalogFields, type ProductAttributeDef } from "@/components/catalog-fields";
 import { BarcodeLabelDialog } from "@/components/barcode-label-dialog";
 import { MxikQrDialog } from "@/components/mxik-qr-dialog";
 import type { CategoryTreeNode } from "@/components/category-select";
+import { useLatinizedSearch } from "@/hooks/use-latinized-search";
 import {
   Dialog,
   DialogContent,
@@ -59,7 +61,47 @@ export function AdminProductsManager({
   const [labelTarget, setLabelTarget] = useState<CatalogProduct | null>(null);
   const [qrTarget, setQrTarget] = useState<CatalogProduct | null>(null);
 
-  const filtered = initialProducts.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [creatorFilter, setCreatorFilter] = useState("all");
+  const [listingFilter, setListingFilter] = useState<"all" | "listed" | "unlisted">("all");
+  const searchTerm = useLatinizedSearch(search);
+
+  const categoryOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const p of initialProducts) seen.set(p.categoryId, p.categoryName);
+    return Array.from(seen.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [initialProducts]);
+
+  const creatorOptions = useMemo(() => {
+    const seen = new Set(initialProducts.map((p) => p.createdByStoreName ?? "Administrator"));
+    return Array.from(seen).sort((a, b) => a.localeCompare(b));
+  }, [initialProducts]);
+
+  const filtered = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    return initialProducts.filter((p) => {
+      if (q) {
+        const haystack = [p.name, p.brand ?? "", p.barcode ?? ""].join(" ").toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      if (categoryFilter !== "all" && p.categoryId !== categoryFilter) return false;
+      if (creatorFilter !== "all" && (p.createdByStoreName ?? "Administrator") !== creatorFilter) return false;
+      if (listingFilter === "listed" && p.storeCount === 0) return false;
+      if (listingFilter === "unlisted" && p.storeCount > 0) return false;
+      return true;
+    });
+  }, [initialProducts, searchTerm, categoryFilter, creatorFilter, listingFilter]);
+
+  const filtersActive = search !== "" || categoryFilter !== "all" || creatorFilter !== "all" || listingFilter !== "all";
+
+  function resetFilters() {
+    setSearch("");
+    setCategoryFilter("all");
+    setCreatorFilter("all");
+    setListingFilter("all");
+  }
 
   function handleSubmit(formData: FormData) {
     const input = {
@@ -124,7 +166,60 @@ export function AdminProductsManager({
         </Dialog>
       </div>
 
-      <Input placeholder="Mahsulot qidirish..." value={search} onChange={(e) => setSearch(e.target.value)} />
+      <div className="space-y-3 rounded-md border p-3">
+        <div className="flex flex-wrap gap-2">
+          <Input
+            placeholder="Qidirish: nomi, brend, shtrix-kod..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="max-w-xs flex-1"
+          />
+          <Select value={categoryFilter} onValueChange={(v) => v && setCategoryFilter(v)}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Kategoriya" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Barcha kategoriyalar</SelectItem>
+              {categoryOptions.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={creatorFilter} onValueChange={(v) => v && setCreatorFilter(v)}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Yaratgan" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Barcha yaratuvchilar</SelectItem>
+              {creatorOptions.map((name) => (
+                <SelectItem key={name} value={name}>
+                  {name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={listingFilter} onValueChange={(v) => v && setListingFilter(v as typeof listingFilter)}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Do'konlar" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Barchasi</SelectItem>
+              <SelectItem value="listed">Kamida bitta do&apos;konda bor</SelectItem>
+              <SelectItem value="unlisted">Hali hech qayerda yo&apos;q</SelectItem>
+            </SelectContent>
+          </Select>
+          {filtersActive && (
+            <Button type="button" size="sm" variant="ghost" onClick={resetFilters}>
+              Filtrlarni tozalash
+            </Button>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {filtered.length} / {initialProducts.length} mahsulot
+        </p>
+      </div>
 
       <div className="overflow-x-auto rounded-md border">
         <Table>
@@ -183,7 +278,7 @@ export function AdminProductsManager({
             {filtered.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} className="text-center text-muted-foreground">
-                  Hech narsa topilmadi
+                  {initialProducts.length === 0 ? "Hozircha mahsulotlar yo'q" : "Filtrga mos mahsulot topilmadi"}
                 </TableCell>
               </TableRow>
             )}
