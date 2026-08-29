@@ -23,19 +23,6 @@ export default async function CheckoutPage({ params }: { params: Promise<{ slug:
 
   const session = await auth();
 
-  if (session?.user && session.user.role !== "CUSTOMER") {
-    return (
-      <Card className="mx-auto max-w-sm">
-        <CardHeader>
-          <CardTitle>Buyurtma berish uchun xaridor hisobi kerak</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          Hozirgi hisobingiz xaridor emas. Iltimos, boshqa brauzerdan yoki chiqib, xaridor sifatida kiring.
-        </CardContent>
-      </Card>
-    );
-  }
-
   if (!session?.user) {
     return (
       <Card className="mx-auto max-w-sm">

@@ -38,7 +38,7 @@ export default async function StoreLayout({
             )}
             <span className="truncate">{store.name}</span>
           </Link>
-          {session?.user?.role === "CUSTOMER" ? (
+          {session?.user ? (
             <div className="flex shrink-0 items-center gap-2">
               <ScriptToggle className="hidden sm:flex" />
               <ThemeToggle className="hidden sm:flex" />

@@ -2,6 +2,13 @@ import { auth } from "@/auth";
 
 export class AuthzError extends Error {}
 
+/** Any logged-in user, regardless of role — for actions everyone can do (e.g. shopping as a customer on someone else's store). */
+export async function requireAuth() {
+  const session = await auth();
+  if (!session?.user) throw new AuthzError("Tizimga kirish talab qilinadi");
+  return session;
+}
+
 export async function requireRole(roles: Array<"SUPER_ADMIN" | "OWNER" | "SELLER" | "CUSTOMER">) {
   const session = await auth();
   if (!session?.user) throw new AuthzError("Tizimga kirish talab qilinadi");

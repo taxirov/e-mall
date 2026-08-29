@@ -16,7 +16,7 @@ const STATUS_LABEL: Record<string, string> = {
 export default async function CustomerOrdersPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const session = await auth();
-  if (!session?.user || session.user.role !== "CUSTOMER") redirect(`/login?callbackUrl=/orders`);
+  if (!session?.user) redirect(`/login?callbackUrl=/orders`);
 
   const store = await prisma.store.findUniqueOrThrow({ where: { slug } });
   const orders = await prisma.order.findMany({
