@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { User, Store as StoreIcon, MapPin, Palette } from "lucide-react";
+import { User, Store as StoreIcon, MapPin, Palette, LocateFixed } from "lucide-react";
 import { updateStoreIdentity, updateStoreContact } from "@/actions/store";
 import { slugify } from "@/lib/domain";
 import { Button } from "@/components/ui/button";
@@ -109,6 +109,8 @@ function StoreIdentityTab({
 
 function StoreContactTab({
   address,
+  latitude,
+  longitude,
   locationUrl,
   workingHours,
   contactPhone,
@@ -116,6 +118,8 @@ function StoreContactTab({
   telegramUrl,
 }: {
   address: string;
+  latitude: number | null;
+  longitude: number | null;
   locationUrl: string;
   workingHours: string;
   contactPhone: string | null;
@@ -124,11 +128,35 @@ function StoreContactTab({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [coords, setCoords] = useState<{ lat: number | null; lng: number | null }>({ lat: latitude, lng: longitude });
+  const [locating, setLocating] = useState(false);
+
+  function useCurrentLocation() {
+    if (!navigator.geolocation) {
+      toast.error("Brauzeringiz joylashuvni aniqlashni qo'llab-quvvatlamaydi");
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setCoords({ lat: position.coords.latitude, lng: position.coords.longitude });
+        setLocating(false);
+        toast.success("Joylashuv aniqlandi — saqlash uchun pastdagi \"Saqlash\" tugmasini bosing");
+      },
+      () => {
+        setLocating(false);
+        toast.error("Joylashuvni aniqlab bo'lmadi — brauzer sozlamalaridan ruxsat berilganini tekshiring");
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
 
   function handleSubmit(formData: FormData) {
     startTransition(async () => {
       const result = await updateStoreContact({
         address: formData.get("address"),
+        latitude: coords.lat,
+        longitude: coords.lng,
         locationUrl: formData.get("locationUrl"),
         workingHours: formData.get("workingHours"),
         contactPhone: formData.get("contactPhone"),
@@ -159,6 +187,24 @@ function StoreContactTab({
           <div className="space-y-2">
             <Label htmlFor="locationUrl">Lokatsiya havolasi (Google/Yandex Maps)</Label>
             <Input id="locationUrl" name="locationUrl" type="url" defaultValue={locationUrl} placeholder="https://maps.app.goo.gl/..." />
+          </div>
+          <div className="space-y-2">
+            <Label>Xarita joylashuvi</Label>
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={useCurrentLocation} disabled={locating}>
+                <LocateFixed className="size-3.5" />
+                {locating ? "Aniqlanmoqda..." : "Joriy joylashuvimni ishlatish"}
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                {coords.lat != null && coords.lng != null
+                  ? `Saqlangan: ${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`
+                  : "Hali belgilanmagan"}
+              </p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Bosh sahifadagi &quot;yaqin do&apos;konlar&quot; ro&apos;yxatida to&apos;g&apos;ri masofa ko&apos;rsatilishi uchun kerak — do&apos;koningizda
+              turgan holda bosing.
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="workingHours">Ish vaqti</Label>
@@ -194,6 +240,8 @@ export function OwnerSettings({
   storeLogoUrl,
   storeBannerUrl,
   storeAddress,
+  storeLatitude,
+  storeLongitude,
   storeLocationUrl,
   storeWorkingHours,
   storeContactPhone,
@@ -208,6 +256,8 @@ export function OwnerSettings({
   storeLogoUrl: string | null;
   storeBannerUrl: string | null;
   storeAddress: string;
+  storeLatitude: number | null;
+  storeLongitude: number | null;
   storeLocationUrl: string;
   storeWorkingHours: string;
   storeContactPhone: string | null;
@@ -247,6 +297,8 @@ export function OwnerSettings({
         <TabsContent value="contact" keepMounted>
           <StoreContactTab
             address={storeAddress}
+            latitude={storeLatitude}
+            longitude={storeLongitude}
             locationUrl={storeLocationUrl}
             workingHours={storeWorkingHours}
             contactPhone={storeContactPhone}

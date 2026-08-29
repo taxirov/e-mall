@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { ROOT_DOMAIN, appOrigin } from "@/lib/domain";
+import { fetchActiveCafes, cafeOrigin } from "@/lib/ecafe";
+import { DiscoveryGrid, type DiscoveryItem } from "@/components/discovery-grid";
 import {
   Store as StoreIcon,
   ShoppingCart,
@@ -72,12 +74,36 @@ export default async function HomePage() {
   const host = (await headers()).get("host") ?? "";
   const appUrl = appOrigin(host);
 
-  const stores = await prisma.store.findMany({
-    where: { status: "ACTIVE" },
-    orderBy: { createdAt: "desc" },
-    select: { id: true, name: true, slug: true, description: true, logoUrl: true },
-    take: 12,
-  });
+  const [stores, cafes] = await Promise.all([
+    prisma.store.findMany({
+      where: { status: "ACTIVE" },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, name: true, slug: true, description: true, logoUrl: true, latitude: true, longitude: true },
+      take: 60,
+    }),
+    fetchActiveCafes(),
+  ]);
+
+  const storeItems: DiscoveryItem[] = stores.map((store) => ({
+    id: store.id,
+    name: store.name,
+    slug: store.slug,
+    description: store.description,
+    logoUrl: store.logoUrl,
+    latitude: store.latitude,
+    longitude: store.longitude,
+    href: `https://${store.slug}.${ROOT_DOMAIN}`,
+  }));
+  const cafeItems: DiscoveryItem[] = cafes.map((cafe) => ({
+    id: cafe.id,
+    name: cafe.name,
+    slug: cafe.slug,
+    description: cafe.description,
+    logoUrl: cafe.logoUrl,
+    latitude: cafe.latitude,
+    longitude: cafe.longitude,
+    href: cafeOrigin(cafe.slug),
+  }));
 
   return (
     <div className="flex min-h-full flex-col">
@@ -115,9 +141,9 @@ export default async function HomePage() {
               Xaridor sifatida ro&apos;yxatdan o&apos;ting
             </Button>
           </div>
-          {stores.length > 0 && (
+          {(storeItems.length > 0 || cafeItems.length > 0) && (
             <Link href="#dokonlar" className="mt-6 text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground">
-              yoki faol do&apos;konlarni ko&apos;rib chiqing ↓
+              yoki yaqin atrofdagi do&apos;kon va kafelarni ko&apos;rib chiqing ↓
             </Link>
           )}
         </div>
@@ -171,17 +197,17 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Active stores */}
+      {/* Discovery: stores + e-cafe cafes/restaurants */}
       <main id="dokonlar" className="flex-1 scroll-mt-14 px-4 py-16 sm:py-20">
         <div className="mx-auto max-w-6xl">
           <div className="mb-8 flex items-end justify-between gap-3">
             <div>
-              <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Faol do&apos;konlar</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Platformamizda savdo qilayotgan do&apos;konlar</p>
+              <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Yaqin atrofda</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Do&apos;konlar va e-cafe.uz&apos;dagi kafe/restoranlar</p>
             </div>
           </div>
 
-          {stores.length === 0 ? (
+          {storeItems.length === 0 && cafeItems.length === 0 ? (
             <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed px-4 py-16 text-center">
               <div className="flex size-12 items-center justify-center rounded-full bg-brand/10 text-brand">
                 <StoreIcon className="size-6" />
@@ -195,25 +221,7 @@ export default async function HomePage() {
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-              {stores.map((store) => (
-                <Link
-                  key={store.id}
-                  href={`https://${store.slug}.${ROOT_DOMAIN}`}
-                  className="group flex h-full flex-col gap-3 rounded-2xl border bg-background p-4 transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md"
-                >
-                  <div className="flex size-10 items-center justify-center rounded-xl bg-muted text-muted-foreground group-hover:bg-brand/10 group-hover:text-brand">
-                    <StoreIcon className="size-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">{store.name}</p>
-                    <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
-                      {store.description ?? "Do'kon tavsifi kiritilmagan"}
-                    </p>
-                  </div>
-                </Link>
-              ))}
-            </div>
+            <DiscoveryGrid stores={storeItems} cafes={cafeItems} />
           )}
         </div>
       </main>

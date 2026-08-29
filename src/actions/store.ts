@@ -50,12 +50,14 @@ export async function updateStoreContact(input: unknown): Promise<ActionResult> 
 
   const parsed = updateStoreContactSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Xatolik" };
-  const { address, locationUrl, workingHours, contactPhone, instagramUrl, telegramUrl } = parsed.data;
+  const { address, latitude, longitude, locationUrl, workingHours, contactPhone, instagramUrl, telegramUrl } = parsed.data;
 
   await prisma.store.update({
     where: { id: storeId },
     data: {
       address: address || null,
+      latitude,
+      longitude,
       locationUrl: locationUrl || null,
       workingHours: workingHours || null,
       contactPhone: contactPhone || null,
@@ -66,5 +68,6 @@ export async function updateStoreContact(input: unknown): Promise<ActionResult> 
 
   revalidatePath("/dashboard/owner/settings");
   revalidatePath("/store/[slug]", "layout");
+  revalidatePath("/");
   return { ok: true, data: undefined };
 }

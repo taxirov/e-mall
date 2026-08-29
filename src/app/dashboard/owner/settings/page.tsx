@@ -23,6 +23,8 @@ export default async function StoreSettingsPage() {
       storeLogoUrl={store.logoUrl}
       storeBannerUrl={store.bannerUrl}
       storeAddress={store.address ?? ""}
+      storeLatitude={store.latitude}
+      storeLongitude={store.longitude}
       storeLocationUrl={store.locationUrl ?? ""}
       storeWorkingHours={store.workingHours ?? ""}
       storeContactPhone={store.contactPhone}

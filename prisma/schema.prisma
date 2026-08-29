@@ -104,6 +104,8 @@ model Store {
   logoUrl              String?
   bannerUrl            String?
   address              String?
+  latitude             Float?
+  longitude            Float?
   locationUrl          String?
   workingHours         String?
   contactPhone         String?

@@ -232,6 +232,15 @@ const optionalPhone = z
   .nullable()
   .refine((v) => !v || /^\+998\d{9}$/.test(v), "Telefon raqam +998XXXXXXXXX formatida bo'lishi kerak");
 
+/** Comes from a hidden input set by the browser's geolocation API — best-effort, never blocks saving the rest of the form. */
+const optionalCoordinate = z
+  .union([z.string(), z.number(), z.null(), z.undefined()])
+  .transform((v) => {
+    if (v === null || v === undefined || v === "") return null;
+    const num = typeof v === "number" ? v : Number(v);
+    return Number.isFinite(num) ? num : null;
+  });
+
 export const updateStoreIdentitySchema = z.object({
   name: z.string().min(2, "Do'kon nomi kamida 2 ta belgidan iborat bo'lishi kerak"),
   description: z.string().max(500, "Tavsif 500 ta belgidan oshmasligi kerak").optional().nullable(),
@@ -243,6 +252,8 @@ export type UpdateStoreIdentityInput = z.infer<typeof updateStoreIdentitySchema>
 
 export const updateStoreContactSchema = z.object({
   address: z.string().max(300, "Manzil 300 ta belgidan oshmasligi kerak").optional().nullable(),
+  latitude: optionalCoordinate,
+  longitude: optionalCoordinate,
   locationUrl: optionalUrl,
   workingHours: z.string().max(200, "Ish vaqti 200 ta belgidan oshmasligi kerak").optional().nullable(),
   contactPhone: optionalPhone,
