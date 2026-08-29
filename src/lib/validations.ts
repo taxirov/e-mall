@@ -241,6 +241,12 @@ const optionalCoordinate = z
     return Number.isFinite(num) ? num : null;
   });
 
+const optionalServicePolygon = z
+  .array(z.object({ lat: z.number(), lng: z.number() }))
+  .nullable()
+  .optional()
+  .transform((v) => (v && v.length >= 3 ? v : null));
+
 export const updateStoreIdentitySchema = z.object({
   name: z.string().min(2, "Do'kon nomi kamida 2 ta belgidan iborat bo'lishi kerak"),
   description: z.string().max(500, "Tavsif 500 ta belgidan oshmasligi kerak").optional().nullable(),
@@ -254,6 +260,8 @@ export const updateStoreContactSchema = z.object({
   address: z.string().max(300, "Manzil 300 ta belgidan oshmasligi kerak").optional().nullable(),
   latitude: optionalCoordinate,
   longitude: optionalCoordinate,
+  serviceRadiusKm: optionalCoordinate,
+  servicePolygon: optionalServicePolygon,
   locationUrl: optionalUrl,
   workingHours: z.string().max(200, "Ish vaqti 200 ta belgidan oshmasligi kerak").optional().nullable(),
   contactPhone: optionalPhone,

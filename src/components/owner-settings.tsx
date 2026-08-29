@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { User, Store as StoreIcon, MapPin, Palette, LocateFixed } from "lucide-react";
+import { User, Store as StoreIcon, MapPin, Palette } from "lucide-react";
 import { updateStoreIdentity, updateStoreContact } from "@/actions/store";
 import { slugify } from "@/lib/domain";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageUpload } from "@/components/image-upload";
 import { PhoneInput } from "@/components/phone-input";
+import { LocationPicker } from "@/components/location-picker";
+import type { ServiceMode } from "@/components/location-picker-inner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ProfileTab } from "@/components/settings/profile-tab";
@@ -111,6 +113,8 @@ function StoreContactTab({
   address,
   latitude,
   longitude,
+  serviceRadiusKm,
+  servicePolygon,
   locationUrl,
   workingHours,
   contactPhone,
@@ -120,6 +124,8 @@ function StoreContactTab({
   address: string;
   latitude: number | null;
   longitude: number | null;
+  serviceRadiusKm: number | null;
+  servicePolygon: { lat: number; lng: number }[] | null;
   locationUrl: string;
   workingHours: string;
   contactPhone: string | null;
@@ -128,35 +134,21 @@ function StoreContactTab({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [coords, setCoords] = useState<{ lat: number | null; lng: number | null }>({ lat: latitude, lng: longitude });
-  const [locating, setLocating] = useState(false);
-
-  function useCurrentLocation() {
-    if (!navigator.geolocation) {
-      toast.error("Brauzeringiz joylashuvni aniqlashni qo'llab-quvvatlamaydi");
-      return;
-    }
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setCoords({ lat: position.coords.latitude, lng: position.coords.longitude });
-        setLocating(false);
-        toast.success("Joylashuv aniqlandi — saqlash uchun pastdagi \"Saqlash\" tugmasini bosing");
-      },
-      () => {
-        setLocating(false);
-        toast.error("Joylashuvni aniqlab bo'lmadi — brauzer sozlamalaridan ruxsat berilganini tekshiring");
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  }
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(
+    latitude != null && longitude != null ? { lat: latitude, lng: longitude } : null
+  );
+  const [serviceMode, setServiceMode] = useState<ServiceMode>(servicePolygon && servicePolygon.length >= 3 ? "polygon" : "radius");
+  const [radiusKm, setRadiusKm] = useState<number | null>(serviceRadiusKm);
+  const [polygon, setPolygon] = useState(servicePolygon ?? []);
 
   function handleSubmit(formData: FormData) {
     startTransition(async () => {
       const result = await updateStoreContact({
         address: formData.get("address"),
-        latitude: coords.lat,
-        longitude: coords.lng,
+        latitude: coords?.lat ?? null,
+        longitude: coords?.lng ?? null,
+        serviceRadiusKm: serviceMode === "radius" ? radiusKm : null,
+        servicePolygon: serviceMode === "polygon" ? polygon : null,
         locationUrl: formData.get("locationUrl"),
         workingHours: formData.get("workingHours"),
         contactPhone: formData.get("contactPhone"),
@@ -189,21 +181,19 @@ function StoreContactTab({
             <Input id="locationUrl" name="locationUrl" type="url" defaultValue={locationUrl} placeholder="https://maps.app.goo.gl/..." />
           </div>
           <div className="space-y-2">
-            <Label>Xarita joylashuvi</Label>
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={useCurrentLocation} disabled={locating}>
-                <LocateFixed className="size-3.5" />
-                {locating ? "Aniqlanmoqda..." : "Joriy joylashuvimni ishlatish"}
-              </Button>
-              <p className="text-xs text-muted-foreground">
-                {coords.lat != null && coords.lng != null
-                  ? `Saqlangan: ${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`
-                  : "Hali belgilanmagan"}
-              </p>
-            </div>
+            <Label>Xarita va xizmat hududi</Label>
+            <LocationPicker
+              value={coords}
+              onChange={setCoords}
+              serviceMode={serviceMode}
+              onServiceModeChange={setServiceMode}
+              radiusKm={radiusKm}
+              onRadiusKmChange={setRadiusKm}
+              polygon={polygon}
+              onPolygonChange={setPolygon}
+            />
             <p className="text-xs text-muted-foreground">
-              Bosh sahifadagi &quot;yaqin do&apos;konlar&quot; ro&apos;yxatida to&apos;g&apos;ri masofa ko&apos;rsatilishi uchun kerak — do&apos;koningizda
-              turgan holda bosing.
+              Bosh sahifada faqat shu hududga kiruvchi mijozlarga do&apos;koningiz ko&apos;rsatiladi.
             </p>
           </div>
           <div className="space-y-2">
@@ -242,6 +232,8 @@ export function OwnerSettings({
   storeAddress,
   storeLatitude,
   storeLongitude,
+  storeServiceRadiusKm,
+  storeServicePolygon,
   storeLocationUrl,
   storeWorkingHours,
   storeContactPhone,
@@ -258,6 +250,8 @@ export function OwnerSettings({
   storeAddress: string;
   storeLatitude: number | null;
   storeLongitude: number | null;
+  storeServiceRadiusKm: number | null;
+  storeServicePolygon: { lat: number; lng: number }[] | null;
   storeLocationUrl: string;
   storeWorkingHours: string;
   storeContactPhone: string | null;
@@ -299,6 +293,8 @@ export function OwnerSettings({
             address={storeAddress}
             latitude={storeLatitude}
             longitude={storeLongitude}
+            serviceRadiusKm={storeServiceRadiusKm}
+            servicePolygon={storeServicePolygon}
             locationUrl={storeLocationUrl}
             workingHours={storeWorkingHours}
             contactPhone={storeContactPhone}

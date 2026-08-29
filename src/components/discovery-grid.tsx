@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Store as StoreIcon, UtensilsCrossed } from "lucide-react";
-import { haversineDistanceKm } from "@/lib/geo";
+import { haversineDistanceKm, isWithinRadius, isPointInPolygon, type LatLng } from "@/lib/geo";
 import { cn } from "@/lib/utils";
 
 export type DiscoveryItem = {
@@ -13,19 +13,33 @@ export type DiscoveryItem = {
   logoUrl: string | null;
   latitude: number | null;
   longitude: number | null;
+  serviceRadiusKm: number | null;
+  servicePolygon: LatLng[] | null;
   href: string;
 };
 
+function isServed(point: LatLng, item: DiscoveryItem): boolean {
+  if (item.servicePolygon && item.servicePolygon.length >= 3) return isPointInPolygon(point, item.servicePolygon);
+  if (item.serviceRadiusKm != null && item.latitude != null && item.longitude != null) {
+    return isWithinRadius(point, { lat: item.latitude, lng: item.longitude }, item.serviceRadiusKm);
+  }
+  // No service area configured yet — don't punish the owner for not having
+  // set one up, just show it unfiltered (still sorted by distance below).
+  return true;
+}
+
 /**
  * Uzum-Tezkor-style discovery grid: two tabs (e-mall's own stores, and
- * e-cafe.uz's cafes/restaurants fetched cross-app), sorted by distance from
- * the visitor's browser geolocation when granted. Denying/lacking
- * geolocation just falls back to the server-provided order (newest first) —
- * never blocks or errors the page.
+ * e-cafe.uz's cafes/restaurants fetched cross-app). Once the visitor's
+ * browser geolocation is granted, the list is filtered down to only
+ * stores/cafes whose service area (radius or polygon) actually covers that
+ * point, then sorted by distance. Denying/lacking geolocation just falls
+ * back to the full, unfiltered server-provided order — never blocks or
+ * errors the page.
  */
 export function DiscoveryGrid({ stores, cafes }: { stores: DiscoveryItem[]; cafes: DiscoveryItem[] }) {
   const [tab, setTab] = useState<"stores" | "cafes">("stores");
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [userLocation, setUserLocation] = useState<LatLng | null>(null);
 
   useEffect(() => {
     if (!navigator.geolocation) return;
@@ -38,7 +52,7 @@ export function DiscoveryGrid({ stores, cafes }: { stores: DiscoveryItem[]; cafe
 
   const items = tab === "stores" ? stores : cafes;
 
-  const sorted = useMemo(() => {
+  const visible = useMemo(() => {
     const withDistance = items.map((item) => ({
       ...item,
       distanceKm:
@@ -47,17 +61,19 @@ export function DiscoveryGrid({ stores, cafes }: { stores: DiscoveryItem[]; cafe
           : null,
     }));
     if (!userLocation) return withDistance;
-    return withDistance.sort((a, b) => {
-      if (a.distanceKm == null && b.distanceKm == null) return 0;
-      if (a.distanceKm == null) return 1;
-      if (b.distanceKm == null) return -1;
-      return a.distanceKm - b.distanceKm;
-    });
+    return withDistance
+      .filter((item) => isServed(userLocation, item))
+      .sort((a, b) => {
+        if (a.distanceKm == null && b.distanceKm == null) return 0;
+        if (a.distanceKm == null) return 1;
+        if (b.distanceKm == null) return -1;
+        return a.distanceKm - b.distanceKm;
+      });
   }, [items, userLocation]);
 
   return (
     <div>
-      <div className="mb-6 inline-flex items-center rounded-full border p-1">
+      <div className="mb-3 inline-flex items-center rounded-full border p-1">
         <button
           type="button"
           onClick={() => setTab("stores")}
@@ -82,16 +98,26 @@ export function DiscoveryGrid({ stores, cafes }: { stores: DiscoveryItem[]; cafe
         </button>
       </div>
 
-      {sorted.length === 0 ? (
+      {userLocation && (
+        <p className="mb-4 text-xs text-muted-foreground">
+          Sizning hududingizga {visible.length} ta {tab === "stores" ? "do'kon" : "kafe/restoran"} xizmat ko&apos;rsatadi.
+        </p>
+      )}
+
+      {visible.length === 0 ? (
         <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed px-4 py-16 text-center text-muted-foreground">
           <p className="font-medium text-foreground">
-            {tab === "stores" ? "Hozircha faol do'konlar yo'q" : "Hozircha faol kafe/restoranlar yo'q"}
+            {userLocation
+              ? "Sizning hududingizga hozircha xizmat ko'rsatuvchi joy topilmadi"
+              : tab === "stores"
+                ? "Hozircha faol do'konlar yo'q"
+                : "Hozircha faol kafe/restoranlar yo'q"}
           </p>
           <p className="text-sm">Tez orada shu yerda ko&apos;rinadi.</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-          {sorted.map((item) => (
+          {visible.map((item) => (
             <a
               key={item.id}
               href={item.href}

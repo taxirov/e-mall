@@ -44,6 +44,14 @@ export default auth((req) => {
     return NextResponse.rewrite(url);
   }
 
+  // Path-based alternative to the subdomain above: e-mall.uz/mall/dokon/* ->
+  // /store/dokon/* (same page/layout, just reachable without a subdomain).
+  if (!storeSlug && nextUrl.pathname.startsWith("/mall/")) {
+    const url = nextUrl.clone();
+    url.pathname = nextUrl.pathname.replace(/^\/mall\//, "/store/");
+    return NextResponse.rewrite(url);
+  }
+
   // e-mall.uz is the public landing page — auth/dashboard pages live on
   // app.e-mall.uz only, so send those requests over there.
   if (!storeSlug && !appHost) {

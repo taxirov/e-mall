@@ -3,8 +3,8 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
-import { ROOT_DOMAIN, appOrigin } from "@/lib/domain";
-import { fetchActiveCafes, cafeOrigin } from "@/lib/ecafe";
+import { appOrigin } from "@/lib/domain";
+import { fetchActiveCafes } from "@/lib/ecafe";
 import { DiscoveryGrid, type DiscoveryItem } from "@/components/discovery-grid";
 import {
   Store as StoreIcon,
@@ -78,7 +78,17 @@ export default async function HomePage() {
     prisma.store.findMany({
       where: { status: "ACTIVE" },
       orderBy: { createdAt: "desc" },
-      select: { id: true, name: true, slug: true, description: true, logoUrl: true, latitude: true, longitude: true },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        description: true,
+        logoUrl: true,
+        latitude: true,
+        longitude: true,
+        serviceRadiusKm: true,
+        servicePolygon: true,
+      },
       take: 60,
     }),
     fetchActiveCafes(),
@@ -92,7 +102,9 @@ export default async function HomePage() {
     logoUrl: store.logoUrl,
     latitude: store.latitude,
     longitude: store.longitude,
-    href: `https://${store.slug}.${ROOT_DOMAIN}`,
+    serviceRadiusKm: store.serviceRadiusKm,
+    servicePolygon: store.servicePolygon as { lat: number; lng: number }[] | null,
+    href: `/mall/${store.slug}`,
   }));
   const cafeItems: DiscoveryItem[] = cafes.map((cafe) => ({
     id: cafe.id,
@@ -102,7 +114,9 @@ export default async function HomePage() {
     logoUrl: cafe.logoUrl,
     latitude: cafe.latitude,
     longitude: cafe.longitude,
-    href: cafeOrigin(cafe.slug),
+    serviceRadiusKm: cafe.serviceRadiusKm,
+    servicePolygon: cafe.servicePolygon,
+    href: `/cafe/${cafe.slug}`,
   }));
 
   return (

@@ -106,6 +106,8 @@ model Store {
   address              String?
   latitude             Float?
   longitude            Float?
+  serviceRadiusKm      Float?
+  servicePolygon       Json?
   locationUrl          String?
   workingHours         String?
   contactPhone         String?

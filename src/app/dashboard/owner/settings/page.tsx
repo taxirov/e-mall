@@ -25,6 +25,8 @@ export default async function StoreSettingsPage() {
       storeAddress={store.address ?? ""}
       storeLatitude={store.latitude}
       storeLongitude={store.longitude}
+      storeServiceRadiusKm={store.serviceRadiusKm}
+      storeServicePolygon={store.servicePolygon as { lat: number; lng: number }[] | null}
       storeLocationUrl={store.locationUrl ?? ""}
       storeWorkingHours={store.workingHours ?? ""}
       storeContactPhone={store.contactPhone}
