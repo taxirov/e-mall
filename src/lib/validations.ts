@@ -267,6 +267,7 @@ export const updateStoreContactSchema = z.object({
   contactPhone: optionalPhone,
   instagramUrl: optionalUrl,
   telegramUrl: optionalUrl,
+  useEcourier: z.boolean().default(true),
 });
 export type UpdateStoreContactInput = z.infer<typeof updateStoreContactSchema>;
 
@@ -285,6 +286,8 @@ export const placeOrderSchema = z.object({
   items: z.array(cartItemSchema).min(1, "Kamida bitta mahsulot tanlang"),
   address: z.string().min(3, "Manzil kiritilishi shart"),
   phone: phoneSchema,
+  latitude: optionalCoordinate,
+  longitude: optionalCoordinate,
   note: z.string().optional(),
 });
 export type PlaceOrderInput = z.infer<typeof placeOrderSchema>;

@@ -21,6 +21,9 @@ type Order = {
   createdAt: string;
   customerName: string;
   customerPhone: string;
+  courierStatus: string | null;
+  courierName: string | null;
+  courierPhone: string | null;
   items: { name: string; qty: number; price: string }[];
 };
 
@@ -32,6 +35,13 @@ const STATUS_LABEL: Record<string, string> = {
   CANCELLED: "Bekor qilingan",
 };
 const STATUSES = Object.keys(STATUS_LABEL);
+
+const COURIER_STATUS_LABEL: Record<string, string> = {
+  searching: "Kuryer qidirilmoqda",
+  assigned: "Kuryer topildi",
+  picked_up: "Kuryer yo'lda",
+  delivered: "Yetkazildi",
+};
 
 export function OrderManager({ initialOrders }: { initialOrders: Order[] }) {
   const router = useRouter();
@@ -72,9 +82,18 @@ export function OrderManager({ initialOrders }: { initialOrders: Order[] }) {
                   {formatDateTime(order.createdAt)} · {order.address}
                 </p>
               </div>
-              <Badge variant={order.status === "CANCELLED" ? "destructive" : order.status === "DELIVERED" ? "default" : "secondary"}>
-                {STATUS_LABEL[order.status]}
-              </Badge>
+              <div className="flex flex-col items-end gap-1.5">
+                <Badge variant={order.status === "CANCELLED" ? "destructive" : order.status === "DELIVERED" ? "default" : "secondary"}>
+                  {STATUS_LABEL[order.status]}
+                </Badge>
+                {order.courierStatus && (
+                  <Badge variant="outline" className="text-xs">
+                    {COURIER_STATUS_LABEL[order.courierStatus] ?? order.courierStatus}
+                    {order.courierName ? ` — ${order.courierName}` : ""}
+                    {order.courierPhone ? ` (${order.courierPhone})` : ""}
+                  </Badge>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="space-y-3">
               <ul className="text-sm text-muted-foreground">

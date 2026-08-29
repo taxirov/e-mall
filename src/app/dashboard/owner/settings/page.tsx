@@ -32,6 +32,7 @@ export default async function StoreSettingsPage() {
       storeContactPhone={store.contactPhone}
       storeInstagramUrl={store.instagramUrl ?? ""}
       storeTelegramUrl={store.telegramUrl ?? ""}
+      storeUseEcourier={store.useEcourier}
     />
   );
 }

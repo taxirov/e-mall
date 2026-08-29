@@ -113,6 +113,7 @@ model Store {
   contactPhone         String?
   instagramUrl         String?
   telegramUrl          String?
+  useEcourier          Boolean              @default(true)
   status               StoreStatus          @default(PENDING)
   ownerId              String               @unique
   owner                User                 @relation("StoreOwner", fields: [ownerId], references: [id])
@@ -433,6 +434,12 @@ model Order {
   address    String?
   phone      String?
   note       String?
+  latitude       Float?
+  longitude      Float?
+  courierOrderId String?
+  courierStatus  String?
+  courierName    String?
+  courierPhone   String?
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
 

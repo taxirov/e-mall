@@ -6,6 +6,7 @@ import { requireAuth, requireStoreMember } from "@/lib/authz";
 import { placeOrderSchema } from "@/lib/validations";
 import { broadcastToStore } from "@/lib/realtime";
 import { ONLINE_ORDERING_ENABLED } from "@/lib/config";
+import { APP_DOMAIN } from "@/lib/domain";
 import type { ActionResult } from "./auth";
 
 export async function placeOrder(storeSlug: string, input: unknown): Promise<ActionResult<{ orderId: string }>> {
@@ -18,7 +19,7 @@ export async function placeOrder(storeSlug: string, input: unknown): Promise<Act
 
   const parsed = placeOrderSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Xatolik" };
-  const { items, address, phone, note } = parsed.data;
+  const { items, address, phone, latitude, longitude, note } = parsed.data;
 
   const productIds = items.map((i) => i.productId);
   const products = await prisma.product.findMany({
@@ -42,6 +43,8 @@ export async function placeOrder(storeSlug: string, input: unknown): Promise<Act
       total,
       address,
       phone,
+      latitude,
+      longitude,
       note,
       items: {
         create: items.map((item) => ({
@@ -60,6 +63,65 @@ export async function placeOrder(storeSlug: string, input: unknown): Promise<Act
 }
 
 const ORDER_STATUSES = ["PENDING", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED"] as const;
+
+/**
+ * Sends a SHIPPED order to e-courier.uz so it can find the nearest available
+ * courier. Best-effort: missing coordinates, a disabled useEcourier flag, or
+ * a network/API failure are logged and swallowed rather than blocking the
+ * owner from marking the order shipped.
+ */
+async function dispatchToCourier(orderId: string, storeId: string) {
+  const [order, store] = await Promise.all([
+    prisma.order.findUnique({
+      where: { id: orderId },
+      select: { id: true, address: true, latitude: true, longitude: true },
+    }),
+    prisma.store.findUnique({
+      where: { id: storeId },
+      select: { useEcourier: true, address: true, latitude: true, longitude: true },
+    }),
+  ]);
+  if (!store?.useEcourier) return;
+  if (!order?.latitude || !order.longitude || !store.latitude || !store.longitude) {
+    console.error(`e-courier dispatch skipped for order ${orderId}: missing coordinates`);
+    return;
+  }
+
+  const apiUrl = process.env.ECOURIER_API_URL;
+  const secret = process.env.ECOURIER_WEBHOOK_SECRET;
+  if (!apiUrl || !secret) {
+    console.error(`e-courier dispatch skipped for order ${orderId}: ECOURIER_API_URL/ECOURIER_WEBHOOK_SECRET not set`);
+    return;
+  }
+
+  try {
+    const res = await fetch(`${apiUrl}/webhooks/orders`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Webhook-Secret": secret },
+      body: JSON.stringify({
+        source: "e-mall",
+        externalOrderId: order.id,
+        pickup: { lat: store.latitude, lng: store.longitude },
+        pickupAddress: store.address,
+        dropoff: { lat: order.latitude, lng: order.longitude },
+        dropoffAddress: order.address,
+        callbackUrl: `https://${APP_DOMAIN}/api/courier-webhook`,
+      }),
+    });
+    if (!res.ok) {
+      console.error(`e-courier dispatch failed for order ${orderId}: HTTP ${res.status}`);
+      return;
+    }
+    const dispatched = (await res.json()) as { id: string };
+    await prisma.order.update({
+      where: { id: orderId },
+      data: { courierOrderId: dispatched.id, courierStatus: "searching" },
+    });
+    await broadcastToStore(storeId, "order:updated", { orderId });
+  } catch (err) {
+    console.error(`e-courier dispatch error for order ${orderId}:`, err);
+  }
+}
 
 export async function updateOrderStatus(orderId: string, status: (typeof ORDER_STATUSES)[number]): Promise<ActionResult> {
   const { storeId } = await requireStoreMember();
@@ -81,6 +143,10 @@ export async function updateOrderStatus(orderId: string, status: (typeof ORDER_S
       }
     }
   });
+
+  if (status === "SHIPPED" && order.status !== "SHIPPED") {
+    dispatchToCourier(orderId, storeId).catch((err) => console.error(err));
+  }
 
   revalidatePath("/dashboard/owner/orders");
   return { ok: true, data: undefined };

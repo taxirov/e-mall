@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageUpload } from "@/components/image-upload";
 import { PhoneInput } from "@/components/phone-input";
+import { Switch } from "@/components/ui/switch";
 import { LocationPicker } from "@/components/location-picker";
 import type { ServiceMode } from "@/components/location-picker-inner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -120,6 +121,7 @@ function StoreContactTab({
   contactPhone,
   instagramUrl,
   telegramUrl,
+  useEcourier: initialUseEcourier,
 }: {
   address: string;
   latitude: number | null;
@@ -131,6 +133,7 @@ function StoreContactTab({
   contactPhone: string | null;
   instagramUrl: string;
   telegramUrl: string;
+  useEcourier: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -140,6 +143,7 @@ function StoreContactTab({
   const [serviceMode, setServiceMode] = useState<ServiceMode>(servicePolygon && servicePolygon.length >= 3 ? "polygon" : "radius");
   const [radiusKm, setRadiusKm] = useState<number | null>(serviceRadiusKm);
   const [polygon, setPolygon] = useState(servicePolygon ?? []);
+  const [useEcourier, setUseEcourier] = useState(initialUseEcourier);
 
   function handleSubmit(formData: FormData) {
     startTransition(async () => {
@@ -154,6 +158,7 @@ function StoreContactTab({
         contactPhone: formData.get("contactPhone"),
         instagramUrl: formData.get("instagramUrl"),
         telegramUrl: formData.get("telegramUrl"),
+        useEcourier,
       });
       if (result.ok) {
         toast.success("Bog'lanish ma'lumotlari saqlandi");
@@ -195,6 +200,16 @@ function StoreContactTab({
             <p className="text-xs text-muted-foreground">
               Bosh sahifada faqat shu hududga kiruvchi mijozlarga do&apos;koningiz ko&apos;rsatiladi.
             </p>
+          </div>
+          <div className="flex items-center gap-2 rounded-md border p-3">
+            <Switch id="useEcourier" checked={useEcourier} onCheckedChange={setUseEcourier} />
+            <div>
+              <Label htmlFor="useEcourier">Buyurtmalarni e-courier orqali yetkazish</Label>
+              <p className="text-xs text-muted-foreground">
+                O&apos;chirilsa, &quot;Jo&apos;natildi&quot; deb belgilangan buyurtmalar kuryerga avtomatik uzatilmaydi — o&apos;z
+                kuryeringiz bilan yetkazasiz.
+              </p>
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="workingHours">Ish vaqti</Label>
@@ -239,6 +254,7 @@ export function OwnerSettings({
   storeContactPhone,
   storeInstagramUrl,
   storeTelegramUrl,
+  storeUseEcourier,
 }: {
   userFullName: string;
   userPhone: string;
@@ -257,6 +273,7 @@ export function OwnerSettings({
   storeContactPhone: string | null;
   storeInstagramUrl: string;
   storeTelegramUrl: string;
+  storeUseEcourier: boolean;
 }) {
   return (
     <div className="max-w-lg space-y-4">
@@ -300,6 +317,7 @@ export function OwnerSettings({
             contactPhone={storeContactPhone}
             instagramUrl={storeInstagramUrl}
             telegramUrl={storeTelegramUrl}
+            useEcourier={storeUseEcourier}
           />
         </TabsContent>
         <TabsContent value="site" keepMounted>

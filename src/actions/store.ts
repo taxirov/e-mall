@@ -62,6 +62,7 @@ export async function updateStoreContact(input: unknown): Promise<ActionResult> 
     contactPhone,
     instagramUrl,
     telegramUrl,
+    useEcourier,
   } = parsed.data;
 
   await prisma.store.update({
@@ -77,6 +78,7 @@ export async function updateStoreContact(input: unknown): Promise<ActionResult> 
       contactPhone: contactPhone || null,
       instagramUrl: instagramUrl || null,
       telegramUrl: telegramUrl || null,
+      useEcourier,
     },
   });
 

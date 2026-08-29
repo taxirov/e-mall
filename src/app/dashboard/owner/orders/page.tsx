@@ -28,6 +28,9 @@ export default async function OrdersPage() {
         createdAt: o.createdAt.toISOString(),
         customerName: o.customer.fullName,
         customerPhone: o.customer.phone,
+        courierStatus: o.courierStatus,
+        courierName: o.courierName,
+        courierPhone: o.courierPhone,
         items: o.items.map((i) => ({ name: i.product.catalogProduct.name, qty: i.qty, price: i.priceAtOrder.toString() })),
       }))}
     />

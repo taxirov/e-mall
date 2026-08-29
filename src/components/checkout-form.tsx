@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LocationPicker } from "@/components/location-picker";
 import { formatSom } from "@/lib/format";
 
 export function CheckoutForm({ storeSlug }: { storeSlug: string }) {
@@ -17,6 +18,7 @@ export function CheckoutForm({ storeSlug }: { storeSlug: string }) {
   const { cart, total, clearCart, hydrated } = useCart(storeSlug);
   const [pending, startTransition] = useTransition();
   const [placed, setPlaced] = useState(false);
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   function handleSubmit(formData: FormData) {
     startTransition(async () => {
@@ -24,6 +26,8 @@ export function CheckoutForm({ storeSlug }: { storeSlug: string }) {
         items: cart.map((l) => ({ productId: l.productId, qty: l.qty })),
         address: formData.get("address"),
         phone: formData.get("phone"),
+        latitude: coords?.lat ?? null,
+        longitude: coords?.lng ?? null,
         note: formData.get("note") || undefined,
       });
       if (result.ok) {
@@ -94,6 +98,7 @@ export function CheckoutForm({ storeSlug }: { storeSlug: string }) {
           <div className="space-y-2">
             <Label htmlFor="address">Yetkazib berish manzili</Label>
             <Textarea id="address" name="address" required />
+            <LocationPicker value={coords} onChange={setCoords} height={200} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="phone">Telefon raqam</Label>
