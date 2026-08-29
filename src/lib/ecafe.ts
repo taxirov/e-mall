@@ -6,6 +6,7 @@ export type EcafeCafe = {
   slug: string;
   description: string | null;
   logoUrl: string | null;
+  bannerUrl: string | null;
   address: string | null;
   latitude: number | null;
   longitude: number | null;
