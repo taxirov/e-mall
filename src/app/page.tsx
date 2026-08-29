@@ -64,15 +64,15 @@ export default async function HomePage() {
     <div className="flex min-h-full flex-col">
       <SiteHeader />
 
-      <main className="flex-1 px-4 py-6 sm:py-8">
-        <div className="mx-auto max-w-6xl">
+      <main className="flex-1 px-4 pt-4 pb-10">
+        <div className="mx-auto max-w-7xl">
           {storeItems.length === 0 && cafeItems.length === 0 ? (
-            <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed px-4 py-16 text-center">
-              <div className="flex size-12 items-center justify-center rounded-full bg-brand/10 text-brand">
+            <div className="flex flex-col items-center gap-4 rounded-3xl border border-dashed px-4 py-20 text-center">
+              <div className="flex size-14 items-center justify-center rounded-full bg-brand/10 text-brand">
                 <StoreIcon className="size-6" />
               </div>
               <div>
-                <p className="font-medium">Hozircha faol do&apos;konlar yo&apos;q</p>
+                <p className="font-semibold">Hozircha faol do&apos;konlar yo&apos;q</p>
                 <p className="mt-1 text-sm text-muted-foreground">Birinchi bo&apos;lib do&apos;kon oching va shu yerda ko&apos;ring.</p>
               </div>
               <Button render={<Link href={`${appUrl}/register`} />} nativeButton={false}>

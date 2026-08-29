@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Store as StoreIcon, UtensilsCrossed, Search, MapPin, LocateFixed } from "lucide-react";
+import { Store as StoreIcon, UtensilsCrossed, Search, MapPin, LocateFixed, PackageSearch } from "lucide-react";
 import { haversineDistanceKm, isWithinRadius, isPointInPolygon, type LatLng } from "@/lib/geo";
 import { useLatinizedSearch } from "@/hooks/use-latinized-search";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,13 @@ function isServed(point: LatLng, item: DiscoveryItem): boolean {
   // set one up, just show it unfiltered (still sorted by distance below).
   return true;
 }
+
+const LOCATION_LABEL: Record<"idle" | "locating" | "granted" | "denied", string> = {
+  idle: "Joylashuvni aniqlash",
+  locating: "Joylashuv aniqlanmoqda...",
+  granted: "Joylashuvingiz asosida ko'rsatilmoqda",
+  denied: "Joylashuvni yoqish uchun bosing",
+};
 
 /**
  * Uzum-Tezkor-style discovery grid: a location indicator, search, two tabs
@@ -92,93 +99,116 @@ export function DiscoveryGrid({ stores, cafes }: { stores: DiscoveryItem[]; cafe
   }, [items, userLocation, searchTerm]);
 
   return (
-    <div className="space-y-4">
-      <button
-        type="button"
-        onClick={requestLocation}
-        className="inline-flex items-center gap-1.5 rounded-full border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
-      >
-        {locationStatus === "granted" ? <MapPin className="size-3.5 text-brand" /> : <LocateFixed className="size-3.5" />}
-        {locationStatus === "granted" && "Joylashuvingiz asosida ko'rsatilmoqda"}
-        {locationStatus === "locating" && "Joylashuv aniqlanmoqda..."}
-        {locationStatus === "denied" && "Joylashuvni yoqish uchun bosing"}
-        {locationStatus === "idle" && "Joylashuvni aniqlash"}
-      </button>
-
-      <div className="relative">
-        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Qidiruv"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="h-11 rounded-full pl-10"
-        />
-      </div>
-
-      <div className="inline-flex items-center rounded-full border p-1">
+    <div>
+      <div className="sticky top-14 z-30 -mx-4 space-y-3 bg-background/95 px-4 pt-1 pb-3 backdrop-blur">
         <button
           type="button"
-          onClick={() => setTab("stores")}
-          className={cn(
-            "flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors",
-            tab === "stores" ? "bg-brand text-brand-foreground" : "text-muted-foreground hover:text-foreground"
-          )}
+          onClick={requestLocation}
+          className="flex w-full items-center gap-2 rounded-xl border bg-background px-3 py-2 text-left transition-colors hover:border-brand/40 sm:w-fit"
         >
-          <StoreIcon className="size-4" />
-          Do&apos;konlar ({stores.length})
+          <span
+            className={cn(
+              "flex size-7 shrink-0 items-center justify-center rounded-full",
+              locationStatus === "granted" ? "bg-brand/10 text-brand" : "bg-muted text-muted-foreground"
+            )}
+          >
+            {locationStatus === "granted" ? <MapPin className="size-3.5" /> : <LocateFixed className="size-3.5" />}
+          </span>
+          <span className="truncate text-sm font-medium">{LOCATION_LABEL[locationStatus]}</span>
         </button>
-        <button
-          type="button"
-          onClick={() => setTab("cafes")}
-          className={cn(
-            "flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors",
-            tab === "cafes" ? "bg-brand text-brand-foreground" : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <UtensilsCrossed className="size-4" />
-          Kafe va restoranlar ({cafes.length})
-        </button>
+
+        <div className="relative">
+          <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Do'kon yoki kafe qidirish"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-12 rounded-full border-none bg-muted pl-10 shadow-none focus-visible:bg-background focus-visible:ring-2"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 rounded-full bg-muted p-1">
+          <button
+            type="button"
+            onClick={() => setTab("stores")}
+            className={cn(
+              "flex flex-1 items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-all",
+              tab === "stores" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <StoreIcon className="size-4" />
+            Do&apos;konlar
+            <span className="text-xs font-normal text-muted-foreground">{stores.length}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("cafes")}
+            className={cn(
+              "flex flex-1 items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-all",
+              tab === "cafes" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <UtensilsCrossed className="size-4" />
+            Kafe va restoranlar
+            <span className="text-xs font-normal text-muted-foreground">{cafes.length}</span>
+          </button>
+        </div>
       </div>
 
       {visible.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed px-4 py-16 text-center text-muted-foreground">
-          <p className="font-medium text-foreground">
-            {search
-              ? "Hech narsa topilmadi"
-              : userLocation
-                ? "Sizning hududingizga hozircha xizmat ko'rsatuvchi joy topilmadi"
-                : tab === "stores"
-                  ? "Hozircha faol do'konlar yo'q"
-                  : "Hozircha faol kafe/restoranlar yo'q"}
-          </p>
-          <p className="text-sm">Tez orada shu yerda ko&apos;rinadi.</p>
+        <div className="flex flex-col items-center gap-3 rounded-3xl border border-dashed px-4 py-20 text-center">
+          <div className="flex size-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
+            <PackageSearch className="size-6" />
+          </div>
+          <div>
+            <p className="font-semibold">
+              {search
+                ? "Hech narsa topilmadi"
+                : userLocation
+                  ? "Sizning hududingizga hozircha xizmat ko'rsatuvchi joy topilmadi"
+                  : tab === "stores"
+                    ? "Hozircha faol do'konlar yo'q"
+                    : "Hozircha faol kafe/restoranlar yo'q"}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">Tez orada shu yerda ko&apos;rinadi.</p>
+          </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-5 pt-4 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((item) => (
             <a
               key={item.id}
               href={item.href}
-              className="group overflow-hidden rounded-2xl border bg-background transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md"
+              className="group flex flex-col overflow-hidden rounded-3xl border bg-background shadow-sm transition-all hover:-translate-y-1 hover:border-brand/40 hover:shadow-lg"
             >
               <div className="relative aspect-[16/9] w-full overflow-hidden bg-muted">
                 {item.bannerUrl || item.logoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.bannerUrl ?? item.logoUrl ?? ""} alt="" className="size-full object-cover" />
+                  <img
+                    src={item.bannerUrl ?? item.logoUrl ?? ""}
+                    alt=""
+                    className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
                 ) : (
-                  <div className="flex size-full items-center justify-center text-muted-foreground group-hover:text-brand">
-                    {tab === "stores" ? <StoreIcon className="size-8" /> : <UtensilsCrossed className="size-8" />}
+                  <div className="flex size-full items-center justify-center text-muted-foreground/60">
+                    {tab === "stores" ? <StoreIcon className="size-9" /> : <UtensilsCrossed className="size-9" />}
                   </div>
                 )}
                 {item.distanceKm != null && (
-                  <span className="absolute top-2 right-2 rounded-full bg-background/90 px-2 py-0.5 text-xs font-semibold text-foreground shadow-xs backdrop-blur">
+                  <span className="absolute top-2.5 right-2.5 rounded-full bg-background/90 px-2.5 py-1 text-xs font-semibold text-foreground shadow-xs backdrop-blur">
                     ~{item.distanceKm < 1 ? "1" : Math.round(item.distanceKm)} km
                   </span>
                 )}
+                {item.bannerUrl && item.logoUrl && (
+                  <div className="absolute -bottom-4 left-3 size-11 overflow-hidden rounded-full border-2 border-background bg-background shadow-sm">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={item.logoUrl} alt="" className="size-full object-cover" />
+                  </div>
+                )}
               </div>
-              <div className="p-3.5">
-                <p className="truncate text-sm font-semibold">{item.name}</p>
-                <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+              <div className={cn("flex flex-1 flex-col p-4", item.bannerUrl && item.logoUrl ? "pt-6" : "pt-3.5")}>
+                <p className="truncate text-base font-bold">{item.name}</p>
+                <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
                   {item.description ?? (tab === "stores" ? "Do'kon tavsifi kiritilmagan" : "Tavsif kiritilmagan")}
                 </p>
               </div>
