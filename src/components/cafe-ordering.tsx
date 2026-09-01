@@ -11,7 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PhoneInput } from "@/components/phone-input";
 import { LocationPicker } from "@/components/location-picker";
-import { placeCafeOrder, cafeOrigin, type EcafeCafeMenu, type EcafeMenuItem, type EcafeMenuItemVariant } from "@/lib/ecafe";
+import { cafeOrigin, type EcafeCafeMenu, type EcafeMenuItem, type EcafeMenuItemVariant } from "@/lib/ecafe";
+import { submitCafeOrder } from "@/actions/cafe-order";
 import { formatSom } from "@/lib/format";
 
 /** Cart is keyed by menuItemId, or `${menuItemId}::${variantId}` when the item has variants. */
@@ -62,7 +63,7 @@ export function CafeOrdering({ slug, cafe }: { slug: string; cafe: EcafeCafeMenu
       return;
     }
     startTransition(async () => {
-      const result = await placeCafeOrder(slug, {
+      const result = await submitCafeOrder(slug, {
         items: cartLines.map((l) => ({ menuItemId: l.item.id, variantId: l.variant?.id ?? null, qty: l.qty })),
         customerName: String(formData.get("customerName") ?? ""),
         customerPhone: String(formData.get("phone") ?? ""),
