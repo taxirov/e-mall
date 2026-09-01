@@ -19,8 +19,8 @@ export async function verifyTelegramCode(
   expectedType: "REGISTER" | "LOGIN"
 ): Promise<ActionResult<TelegramVerifyResult>> {
   const trimmed = code.trim();
-  if (!/^\d{6}$/.test(trimmed)) {
-    return { ok: false, error: "Kod 6 xonali raqamdan iborat bo'lishi kerak" };
+  if (!/^\d{5}$/.test(trimmed)) {
+    return { ok: false, error: "Kod 5 xonali raqamdan iborat bo'lishi kerak" };
   }
 
   const record = await prisma.telegramVerification.findUnique({ where: { code: trimmed } });
