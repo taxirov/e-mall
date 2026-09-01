@@ -1,23 +1,27 @@
 import { prisma } from "@/lib/prisma";
 import { StorefrontCatalog } from "@/components/storefront-catalog";
+import { getFavoriteProductIds } from "@/actions/favorites";
 
 export default async function StorefrontPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const store = await prisma.store.findUniqueOrThrow({ where: { slug } });
 
-  const products = await prisma.product.findMany({
-    where: { storeId: store.id, isPublished: true, stock: { gt: 0 } },
-    orderBy: { catalogProduct: { name: "asc" } },
-    select: {
-      id: true,
-      price: true,
-      stock: true,
-      isNew: true,
-      discountPrice: true,
-      discountEndsAt: true,
-      catalogProduct: { select: { name: true, size: true, imageUrl: true, category: true } },
-    },
-  });
+  const [products, favoriteIds] = await Promise.all([
+    prisma.product.findMany({
+      where: { storeId: store.id, isPublished: true, stock: { gt: 0 } },
+      orderBy: { catalogProduct: { name: "asc" } },
+      select: {
+        id: true,
+        price: true,
+        stock: true,
+        isNew: true,
+        discountPrice: true,
+        discountEndsAt: true,
+        catalogProduct: { select: { name: true, size: true, imageUrl: true, category: true } },
+      },
+    }),
+    getFavoriteProductIds(),
+  ]);
 
   const categoriesById = new Map<string, { id: string; name: string }>();
   for (const p of products) {
@@ -40,6 +44,7 @@ export default async function StorefrontPage({ params }: { params: Promise<{ slu
         discountEndsAt: p.discountEndsAt?.toISOString() ?? null,
       }))}
       categories={Array.from(categoriesById.values()).sort((a, b) => a.name.localeCompare(b.name))}
+      initialFavoriteIds={favoriteIds}
     />
   );
 }

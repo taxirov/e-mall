@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { headers } from "next/headers";
+import { Heart, ShoppingBag, User } from "lucide-react";
 import { auth, signOut } from "@/auth";
 import { Button } from "@/components/ui/button";
 import { ScriptToggle } from "@/components/script-toggle";
@@ -21,12 +22,29 @@ export async function SiteHeader() {
         </Link>
 
         {session?.user ? (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <ScriptToggle className="hidden sm:flex" />
             <ThemeToggle className="hidden sm:flex" />
-            <Button render={<Link href={`${appUrl}${dashboardPathFor(session.user.role)}`} />} nativeButton={false} variant="ghost" size="sm">
-              Boshqaruv paneli
+            <Button render={<Link href="/favorites" />} nativeButton={false} variant="ghost" size="icon" aria-label="Sevimlilar">
+              <Heart className="size-4" />
             </Button>
+            <Button render={<Link href="/cart" />} nativeButton={false} variant="ghost" size="icon" aria-label="Savat">
+              <ShoppingBag className="size-4" />
+            </Button>
+            <Button render={<Link href="/account" />} nativeButton={false} variant="ghost" size="icon" aria-label="Akkauntim">
+              <User className="size-4" />
+            </Button>
+            {session.user.role !== "CUSTOMER" && (
+              <Button
+                render={<Link href={`${appUrl}${dashboardPathFor(session.user.role)}`} />}
+                nativeButton={false}
+                variant="ghost"
+                size="sm"
+                className="hidden sm:inline-flex"
+              >
+                Boshqaruv paneli
+              </Button>
+            )}
             <form
               action={async () => {
                 "use server";

@@ -87,3 +87,15 @@ export async function updateStoreContact(input: unknown): Promise<ActionResult> 
   revalidatePath("/");
   return { ok: true, data: undefined };
 }
+
+export type StoreLookup = { slug: string; name: string; logoUrl: string | null };
+
+/** Public — same basic info already visible on the storefront itself. Used to label per-store carts by slug on the /cart page. */
+export async function lookupStoresBySlug(slugs: string[]): Promise<StoreLookup[]> {
+  if (slugs.length === 0) return [];
+  const stores = await prisma.store.findMany({
+    where: { slug: { in: slugs } },
+    select: { slug: true, name: true, logoUrl: true },
+  });
+  return stores;
+}

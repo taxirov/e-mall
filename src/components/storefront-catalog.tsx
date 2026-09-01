@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { ShoppingCart, Plus, Minus, Trash2, PackageSearch, Search, Sparkles, Percent } from "lucide-react";
+import { toast } from "sonner";
+import { ShoppingCart, Plus, Minus, Trash2, PackageSearch, Search, Sparkles, Percent, Heart } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import { useLatinizedSearch } from "@/hooks/use-latinized-search";
 import { formatSom, formatDateTime } from "@/lib/format";
 import { getEffectivePrice, isDiscountActive } from "@/lib/effective-price";
 import { ONLINE_ORDERING_ENABLED } from "@/lib/config";
+import { toggleFavorite } from "@/actions/favorites";
 
 type Product = {
   id: string;
@@ -32,15 +34,41 @@ export function StorefrontCatalog({
   storeSlug,
   initialProducts,
   categories,
+  initialFavoriteIds = [],
 }: {
   storeSlug: string;
   initialProducts: Product[];
   categories: Category[];
+  initialFavoriteIds?: string[];
 }) {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const { cart, addToCart, changeQty, removeLine, total, itemCount } = useCart(storeSlug);
+  const [favoriteIds, setFavoriteIds] = useState(new Set(initialFavoriteIds));
+  const [, startFavoriteTransition] = useTransition();
+
+  function handleToggleFavorite(productId: string) {
+    const wasFavorited = favoriteIds.has(productId);
+    setFavoriteIds((prev) => {
+      const next = new Set(prev);
+      if (wasFavorited) next.delete(productId);
+      else next.add(productId);
+      return next;
+    });
+    startFavoriteTransition(async () => {
+      const result = await toggleFavorite(productId);
+      if (!result.ok) {
+        toast.error(result.error);
+        setFavoriteIds((prev) => {
+          const next = new Set(prev);
+          if (wasFavorited) next.add(productId);
+          else next.delete(productId);
+          return next;
+        });
+      }
+    });
+  }
 
   const searchTerm = useLatinizedSearch(search);
   const filtered = useMemo(
@@ -132,11 +160,26 @@ export function StorefrontCatalog({
                       <Sparkles className="size-3" /> Yangilik
                     </Badge>
                   )}
-                  {discountActive && (
-                    <Badge variant="destructive" className="absolute top-1.5 right-1.5 gap-1">
-                      <Percent className="size-3" /> Chegirma
-                    </Badge>
-                  )}
+                  <div className="absolute top-1.5 right-1.5 flex flex-col items-end gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleFavorite(product.id)}
+                      aria-label="Sevimlilarga qo'shish"
+                      className="flex size-7 items-center justify-center rounded-full bg-background/90 shadow-xs backdrop-blur"
+                    >
+                      <Heart
+                        className={cn(
+                          "size-3.5",
+                          favoriteIds.has(product.id) ? "fill-destructive text-destructive" : "text-muted-foreground"
+                        )}
+                      />
+                    </button>
+                    {discountActive && (
+                      <Badge variant="destructive" className="gap-1">
+                        <Percent className="size-3" /> Chegirma
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 <CardContent className="p-3">
                   <p className="line-clamp-2 text-sm font-medium">{product.name}</p>
