@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { Send, KeyRound } from "lucide-react";
 import { checkPhoneAvailable, checkStoreNameAvailable, type NameAvailability } from "@/actions/auth";
@@ -17,6 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { cn } from "@/lib/utils";
 
 const BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
+const CODE_LENGTH = 5;
 
 type Step1Data = { fullName: string; phone: string; password: string; storeName: string; storeTypeIds: string[] };
 type NameStatus = { status: "idle" | "checking" } | NameAvailability;
@@ -26,6 +27,8 @@ export function RegisterStoreForm({ storeTypes }: { storeTypes: StoreTypeOption[
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [step1Data, setStep1Data] = useState<Step1Data | null>(null);
+  const [code, setCode] = useState("");
+  const lastSubmitted = useRef("");
 
   const [storeName, setStoreName] = useState("");
   const [nameStatus, setNameStatus] = useState<NameStatus>({ status: "idle" });
@@ -96,13 +99,13 @@ export function RegisterStoreForm({ storeTypes }: { storeTypes: StoreTypeOption[
     });
   }
 
-  function handleStep2(formData: FormData) {
+  function submitCode(value: string) {
     if (!step1Data) return;
     setError(null);
-    const code = formData.get("code") as string;
+    lastSubmitted.current = value;
 
     startTransition(async () => {
-      const verifyResult = await verifyTelegramCode(code, "REGISTER");
+      const verifyResult = await verifyTelegramCode(value, "REGISTER");
       if (!verifyResult.ok) {
         setError(verifyResult.error);
         return;
@@ -115,6 +118,12 @@ export function RegisterStoreForm({ storeTypes }: { storeTypes: StoreTypeOption[
       if (resultError) setError(resultError);
     });
   }
+
+  // Auto-verifies the moment all 5 digits are in — no need to press "Yakunlash".
+  useEffect(() => {
+    if (step === 2 && code.length === CODE_LENGTH && code !== lastSubmitted.current) submitCode(code);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code, step]);
 
   return (
     <Card className="w-full max-w-sm rounded-3xl shadow-lg">
@@ -173,7 +182,13 @@ export function RegisterStoreForm({ storeTypes }: { storeTypes: StoreTypeOption[
             </Button>
           </form>
         ) : (
-          <form action={handleStep2} className="space-y-4">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (code.length === CODE_LENGTH) submitCode(code);
+            }}
+            className="space-y-4"
+          >
             <Button
               type="button"
               className="w-full bg-[#26A5E4] text-white hover:bg-[#26A5E4]/90"
@@ -189,15 +204,17 @@ export function RegisterStoreForm({ storeTypes }: { storeTypes: StoreTypeOption[
                 id="code"
                 name="code"
                 inputMode="numeric"
-                maxLength={5}
+                maxLength={CODE_LENGTH}
                 placeholder="00000"
                 required
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, CODE_LENGTH))}
                 className="h-14 text-center text-2xl font-bold tracking-[0.5em]"
               />
-              <p className="text-xs text-muted-foreground">Botdan kelgan 5 xonali kodni kiriting</p>
+              <p className="text-xs text-muted-foreground">Botdan kelgan 5 xonali kodni kiriting — avtomatik tekshiriladi</p>
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full" size="lg" disabled={pending}>
+            <Button type="submit" className="w-full" size="lg" disabled={pending || code.length !== CODE_LENGTH}>
               {pending ? "Yakunlanmoqda..." : "Yakunlash"}
             </Button>
             <button
@@ -205,6 +222,7 @@ export function RegisterStoreForm({ storeTypes }: { storeTypes: StoreTypeOption[
               onClick={() => {
                 setStep(1);
                 setError(null);
+                setCode("");
               }}
               className="w-full text-center text-sm text-muted-foreground underline underline-offset-4"
             >

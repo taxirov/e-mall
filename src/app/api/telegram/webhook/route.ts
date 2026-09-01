@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     });
     await sendTelegramMessage(
       chatId,
-      `Tasdiqlash kodingiz: ${code}\n\nUshbu kodni saytga qaytib kiriting. Kod 10 daqiqa amal qiladi.`,
+      `Tasdiqlash kodingiz: <code>${code}</code>\n\nKodning ustiga bosib nusxalab oling va saytga qaytib kiriting. Kod 10 daqiqa amal qiladi.`,
       { remove_keyboard: true }
     );
     return NextResponse.json({ ok: true });
@@ -71,7 +71,10 @@ export async function POST(req: Request) {
           expiresAt: new Date(Date.now() + CODE_TTL_MS),
         },
       });
-      await sendTelegramMessage(chatId, `Kirish kodingiz: ${code}\n\nUshbu kodni saytga kiriting. Kod 10 daqiqa amal qiladi.`);
+      await sendTelegramMessage(
+        chatId,
+        `Kirish kodingiz: <code>${code}</code>\n\nKodning ustiga bosib nusxalab oling va saytga kiriting. Kod 10 daqiqa amal qiladi.`
+      );
       return NextResponse.json({ ok: true });
     }
 

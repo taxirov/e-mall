@@ -19,6 +19,7 @@ export async function sendTelegramMessage(
     body: JSON.stringify({
       chat_id: chatId,
       text,
+      parse_mode: "HTML",
       reply_markup: replyMarkup,
     }),
     signal: AbortSignal.timeout(8000),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Send, KeyRound, Lock } from "lucide-react";
@@ -14,6 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { cn } from "@/lib/utils";
 
 const BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
+const CODE_LENGTH = 5;
 
 export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
   const [error, formAction, pending] = useActionState(authenticate, undefined);
@@ -21,12 +22,14 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
   const router = useRouter();
   const [telegramPending, startTelegramTransition] = useTransition();
   const [telegramError, setTelegramError] = useState<string | null>(null);
+  const [code, setCode] = useState("");
+  const lastSubmitted = useRef("");
 
-  function handleTelegramLogin(formData: FormData) {
+  function submitCode(value: string) {
     setTelegramError(null);
-    const code = formData.get("code") as string;
+    lastSubmitted.current = value;
     startTelegramTransition(async () => {
-      const result = await authenticateWithTelegramCode(code);
+      const result = await authenticateWithTelegramCode(value);
       if (!result.ok) {
         setTelegramError(result.error);
         return;
@@ -39,6 +42,12 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
       }
     });
   }
+
+  // Auto-verifies the moment all 5 digits are in — no need to press "Kirish".
+  useEffect(() => {
+    if (code.length === CODE_LENGTH && code !== lastSubmitted.current) submitCode(code);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code]);
 
   return (
     <Card className="w-full max-w-sm rounded-3xl shadow-lg">
@@ -89,7 +98,13 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
             </Button>
           </form>
         ) : (
-          <form action={handleTelegramLogin} className="space-y-4">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (code.length === CODE_LENGTH) submitCode(code);
+            }}
+            className="space-y-4"
+          >
             <Button
               type="button"
               className="w-full bg-[#26A5E4] text-white hover:bg-[#26A5E4]/90"
@@ -105,15 +120,17 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
                 id="code"
                 name="code"
                 inputMode="numeric"
-                maxLength={5}
+                maxLength={CODE_LENGTH}
                 placeholder="00000"
                 required
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, CODE_LENGTH))}
                 className="h-14 text-center text-2xl font-bold tracking-[0.5em]"
               />
-              <p className="text-xs text-muted-foreground">Botdan kelgan 5 xonali kodni kiriting</p>
+              <p className="text-xs text-muted-foreground">Botdan kelgan 5 xonali kodni kiriting — avtomatik tekshiriladi</p>
             </div>
             {telegramError && <p className="text-sm text-destructive">{telegramError}</p>}
-            <Button type="submit" className="w-full" size="lg" disabled={telegramPending}>
+            <Button type="submit" className="w-full" size="lg" disabled={telegramPending || code.length !== CODE_LENGTH}>
               {telegramPending ? "Kirilmoqda..." : "Kirish"}
             </Button>
           </form>
