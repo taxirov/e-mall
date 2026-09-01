@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { SiteHeader } from "@/components/site-header";
+import { MobileTabBar } from "@/components/mobile-tab-bar";
 import { FavoritesList, type FavoriteProduct } from "@/components/favorites-list";
 
 export default async function FavoritesPage() {
@@ -32,12 +33,13 @@ export default async function FavoritesPage() {
   return (
     <div className="flex min-h-full flex-col">
       <SiteHeader />
-      <main className="flex-1 px-4 pt-4 pb-10">
+      <main className="flex-1 px-4 pt-4 pb-24 sm:pb-10">
         <div className="mx-auto max-w-6xl">
           <h1 className="mb-4 text-xl font-semibold">Sevimlilar</h1>
           <FavoritesList initialItems={items} />
         </div>
       </main>
+      <MobileTabBar />
     </div>
   );
 }

@@ -28,10 +28,24 @@ export async function SiteHeader() {
             <Button render={<Link href="/favorites" />} nativeButton={false} variant="ghost" size="icon" aria-label="Sevimlilar">
               <Heart className="size-4" />
             </Button>
-            <Button render={<Link href="/cart" />} nativeButton={false} variant="ghost" size="icon" aria-label="Savat">
+            <Button
+              render={<Link href="/cart" />}
+              nativeButton={false}
+              variant="ghost"
+              size="icon"
+              aria-label="Savat"
+              className="hidden sm:inline-flex"
+            >
               <ShoppingBag className="size-4" />
             </Button>
-            <Button render={<Link href="/account" />} nativeButton={false} variant="ghost" size="icon" aria-label="Akkauntim">
+            <Button
+              render={<Link href="/account" />}
+              nativeButton={false}
+              variant="ghost"
+              size="icon"
+              aria-label="Akkauntim"
+              className="hidden sm:inline-flex"
+            >
               <User className="size-4" />
             </Button>
             {session.user.role !== "CUSTOMER" && (

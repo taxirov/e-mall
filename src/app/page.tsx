@@ -2,6 +2,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { SiteHeader } from "@/components/site-header";
+import { MobileTabBar } from "@/components/mobile-tab-bar";
 import { Button } from "@/components/ui/button";
 import { appOrigin } from "@/lib/domain";
 import { fetchActiveCafes } from "@/lib/ecafe";
@@ -64,7 +65,7 @@ export default async function HomePage() {
     <div className="flex min-h-full flex-col">
       <SiteHeader />
 
-      <main className="flex-1 px-4 pt-4 pb-10">
+      <main className="flex-1 px-4 pt-4 pb-24 sm:pb-10">
         <div className="mx-auto max-w-7xl">
           {storeItems.length === 0 && cafeItems.length === 0 ? (
             <div className="flex flex-col items-center gap-4 rounded-3xl border border-dashed px-4 py-20 text-center">
@@ -84,6 +85,7 @@ export default async function HomePage() {
           )}
         </div>
       </main>
+      <MobileTabBar />
     </div>
   );
 }
