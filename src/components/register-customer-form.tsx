@@ -9,6 +9,7 @@ import { verifyTelegramCode } from "@/actions/telegram-verification";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { PhoneInput } from "@/components/phone-input";
 import { PasswordInput } from "@/components/password-input";
 import { StepIndicator } from "@/components/step-indicator";
@@ -25,6 +26,7 @@ export function RegisterCustomerForm({ callbackUrl }: { callbackUrl?: string }) 
   const [error, setError] = useState<string | null>(null);
   const [step1Data, setStep1Data] = useState<Step1Data | null>(null);
   const [code, setCode] = useState("");
+  const [agreed, setAgreed] = useState(false);
   const lastSubmitted = useRef("");
 
   function handleStep1(formData: FormData) {
@@ -35,6 +37,10 @@ export function RegisterCustomerForm({ callbackUrl }: { callbackUrl?: string }) 
 
     if (!phone || phone.length < 13) {
       setError("Telefon raqamni to'liq kiriting");
+      return;
+    }
+    if (!agreed) {
+      setError("Davom etish uchun ommaviy oferta va foydalanish shartlariga rozilik bildiring");
       return;
     }
 
@@ -104,8 +110,25 @@ export function RegisterCustomerForm({ callbackUrl }: { callbackUrl?: string }) 
               <Label htmlFor="password">Parol</Label>
               <PasswordInput minLength={6} required />
             </div>
+            <label className="flex items-start gap-2 text-xs text-muted-foreground">
+              <Checkbox checked={agreed} onCheckedChange={() => setAgreed((v) => !v)} className="mt-0.5" />
+              <span>
+                <Link href="/offer/customer" target="_blank" className="underline underline-offset-4">
+                  Ommaviy oferta
+                </Link>
+                ,{" "}
+                <Link href="/terms" target="_blank" className="underline underline-offset-4">
+                  foydalanish shartlari
+                </Link>{" "}
+                va{" "}
+                <Link href="/privacy" target="_blank" className="underline underline-offset-4">
+                  maxfiylik siyosati
+                </Link>
+                ga roziman
+              </span>
+            </label>
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full" size="lg" disabled={pending}>
+            <Button type="submit" className="w-full" size="lg" disabled={pending || !agreed}>
               {pending ? "Tekshirilmoqda..." : "Davom etish"}
             </Button>
           </form>

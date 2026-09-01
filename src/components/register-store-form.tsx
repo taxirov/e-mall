@@ -9,6 +9,7 @@ import { verifyTelegramCode } from "@/actions/telegram-verification";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { PhoneInput } from "@/components/phone-input";
 import { PasswordInput } from "@/components/password-input";
 import { StepIndicator } from "@/components/step-indicator";
@@ -28,6 +29,7 @@ export function RegisterStoreForm({ storeTypes }: { storeTypes: StoreTypeOption[
   const [error, setError] = useState<string | null>(null);
   const [step1Data, setStep1Data] = useState<Step1Data | null>(null);
   const [code, setCode] = useState("");
+  const [agreed, setAgreed] = useState(false);
   const lastSubmitted = useRef("");
 
   const [storeName, setStoreName] = useState("");
@@ -85,6 +87,10 @@ export function RegisterStoreForm({ storeTypes }: { storeTypes: StoreTypeOption[
     }
     if (storeTypeIds.length === 0) {
       setError("Kamida bitta do'kon turini tanlang");
+      return;
+    }
+    if (!agreed) {
+      setError("Davom etish uchun ommaviy oferta va foydalanish shartlariga rozilik bildiring");
       return;
     }
 
@@ -176,8 +182,25 @@ export function RegisterStoreForm({ storeTypes }: { storeTypes: StoreTypeOption[
               <Label>Do&apos;kon turi</Label>
               <StoreTypeMultiSelect storeTypes={storeTypes} />
             </div>
+            <label className="flex items-start gap-2 text-xs text-muted-foreground">
+              <Checkbox checked={agreed} onCheckedChange={() => setAgreed((v) => !v)} className="mt-0.5" />
+              <span>
+                <Link href="/offer/store" target="_blank" className="underline underline-offset-4">
+                  Ommaviy oferta
+                </Link>
+                ,{" "}
+                <Link href="/terms" target="_blank" className="underline underline-offset-4">
+                  foydalanish shartlari
+                </Link>{" "}
+                va{" "}
+                <Link href="/privacy" target="_blank" className="underline underline-offset-4">
+                  maxfiylik siyosati
+                </Link>
+                ga roziman
+              </span>
+            </label>
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full" size="lg" disabled={pending}>
+            <Button type="submit" className="w-full" size="lg" disabled={pending || !agreed}>
               {pending ? "Tekshirilmoqda..." : "Davom etish"}
             </Button>
           </form>
