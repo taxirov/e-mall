@@ -1,4 +1,5 @@
 import { RegisterCustomerForm } from "@/components/register-customer-form";
+import { AuthShell } from "@/components/auth-shell";
 
 export default async function RegisterCustomerPage({
   searchParams,
@@ -8,8 +9,8 @@ export default async function RegisterCustomerPage({
   const { callbackUrl } = await searchParams;
 
   return (
-    <div className="flex min-h-svh items-center justify-center px-4 py-10">
+    <AuthShell>
       <RegisterCustomerForm callbackUrl={callbackUrl} />
-    </div>
+    </AuthShell>
   );
 }

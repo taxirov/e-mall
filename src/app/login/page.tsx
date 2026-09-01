@@ -1,4 +1,5 @@
 import { LoginForm } from "@/components/login-form";
+import { AuthShell } from "@/components/auth-shell";
 
 export default async function LoginPage({
   searchParams,
@@ -8,8 +9,8 @@ export default async function LoginPage({
   const { callbackUrl } = await searchParams;
 
   return (
-    <div className="flex min-h-svh items-center justify-center px-4 py-10">
+    <AuthShell>
       <LoginForm callbackUrl={callbackUrl} />
-    </div>
+    </AuthShell>
   );
 }

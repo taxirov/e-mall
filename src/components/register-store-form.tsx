@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
-import { Send } from "lucide-react";
+import { Send, KeyRound } from "lucide-react";
 import { checkPhoneAvailable, checkStoreNameAvailable, type NameAvailability } from "@/actions/auth";
 import { completeStoreRegistration } from "@/actions/session";
 import { verifyTelegramCode } from "@/actions/telegram-verification";
@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PhoneInput } from "@/components/phone-input";
+import { PasswordInput } from "@/components/password-input";
+import { StepIndicator } from "@/components/step-indicator";
 import { StoreTypeMultiSelect, type StoreTypeOption } from "@/components/store-type-multi-select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -115,14 +117,15 @@ export function RegisterStoreForm({ storeTypes }: { storeTypes: StoreTypeOption[
   }
 
   return (
-    <Card className="w-full max-w-sm">
+    <Card className="w-full max-w-sm rounded-3xl shadow-lg">
       <CardHeader>
-        <CardTitle>Do&apos;kon oching</CardTitle>
+        <CardTitle className="text-xl">Do&apos;kon oching</CardTitle>
         <CardDescription>
           {step === 1
             ? "Ro'yxatdan o'tgach, do'koningiz Super Admin tomonidan tasdiqlangach faollashadi."
             : "Telegram bot orqali tasdiqlashni yakunlang."}
         </CardDescription>
+        <StepIndicator step={step} labels={["Ma'lumotlar", "Tasdiqlash"]} />
       </CardHeader>
       <CardContent>
         {step === 1 ? (
@@ -158,14 +161,14 @@ export function RegisterStoreForm({ storeTypes }: { storeTypes: StoreTypeOption[
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Parol</Label>
-              <Input id="password" name="password" type="password" minLength={6} required />
+              <PasswordInput minLength={6} required />
             </div>
             <div className="space-y-2">
               <Label>Do&apos;kon turi</Label>
               <StoreTypeMultiSelect storeTypes={storeTypes} />
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full" disabled={pending}>
+            <Button type="submit" className="w-full" size="lg" disabled={pending}>
               {pending ? "Tekshirilmoqda..." : "Davom etish"}
             </Button>
           </form>
@@ -173,18 +176,28 @@ export function RegisterStoreForm({ storeTypes }: { storeTypes: StoreTypeOption[
           <form action={handleStep2} className="space-y-4">
             <Button
               type="button"
-              variant="outline"
-              className="w-full"
+              className="w-full bg-[#26A5E4] text-white hover:bg-[#26A5E4]/90"
               render={<a href={`https://t.me/${BOT_USERNAME}?start=register`} target="_blank" rel="noopener noreferrer" />}
             >
               <Send className="size-4" /> Telegram botga o&apos;tish
             </Button>
             <div className="space-y-2">
-              <Label htmlFor="code">Tasdiqlash kodi</Label>
-              <Input id="code" name="code" inputMode="numeric" maxLength={6} placeholder="123456" required />
+              <Label htmlFor="code" className="flex items-center gap-1.5">
+                <KeyRound className="size-3.5" /> Tasdiqlash kodi
+              </Label>
+              <Input
+                id="code"
+                name="code"
+                inputMode="numeric"
+                maxLength={5}
+                placeholder="00000"
+                required
+                className="h-14 text-center text-2xl font-bold tracking-[0.5em]"
+              />
+              <p className="text-xs text-muted-foreground">Botdan kelgan 5 xonali kodni kiriting</p>
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full" disabled={pending}>
+            <Button type="submit" className="w-full" size="lg" disabled={pending}>
               {pending ? "Yakunlanmoqda..." : "Yakunlash"}
             </Button>
             <button
@@ -199,7 +212,7 @@ export function RegisterStoreForm({ storeTypes }: { storeTypes: StoreTypeOption[
             </button>
           </form>
         )}
-        <p className="mt-4 text-center text-sm text-muted-foreground">
+        <p className="mt-5 text-center text-sm text-muted-foreground">
           Hisobingiz bormi?{" "}
           <Link href="/login" className="font-medium text-foreground underline underline-offset-4">
             Kirish

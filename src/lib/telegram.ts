@@ -33,7 +33,7 @@ export function requestContactKeyboard(): ReplyKeyboardMarkup {
   };
 }
 
-/** Generates a 6-digit numeric verification code as a zero-padded string. */
+/** Generates a 5-digit numeric verification code as a zero-padded string. */
 export function generateVerificationCode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return Math.floor(10000 + Math.random() * 90000).toString();
 }

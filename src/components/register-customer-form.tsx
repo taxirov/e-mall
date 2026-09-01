@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Send } from "lucide-react";
+import { Send, KeyRound } from "lucide-react";
 import { checkPhoneAvailable } from "@/actions/auth";
 import { completeCustomerRegistration } from "@/actions/session";
 import { verifyTelegramCode } from "@/actions/telegram-verification";
@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PhoneInput } from "@/components/phone-input";
+import { PasswordInput } from "@/components/password-input";
+import { StepIndicator } from "@/components/step-indicator";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
@@ -68,14 +70,15 @@ export function RegisterCustomerForm({ callbackUrl }: { callbackUrl?: string }) 
   }
 
   return (
-    <Card className="w-full max-w-sm">
+    <Card className="w-full max-w-sm rounded-3xl shadow-lg">
       <CardHeader>
-        <CardTitle>Xaridor sifatida ro&apos;yxatdan o&apos;tish</CardTitle>
+        <CardTitle className="text-xl">Xaridor sifatida ro&apos;yxatdan o&apos;tish</CardTitle>
         <CardDescription>
           {step === 1
             ? "Do'konlardan onlayn buyurtma berish uchun hisob yarating"
             : "Telegram bot orqali tasdiqlashni yakunlang."}
         </CardDescription>
+        <StepIndicator step={step} labels={["Ma'lumotlar", "Tasdiqlash"]} />
       </CardHeader>
       <CardContent>
         {step === 1 ? (
@@ -90,10 +93,10 @@ export function RegisterCustomerForm({ callbackUrl }: { callbackUrl?: string }) 
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Parol</Label>
-              <Input id="password" name="password" type="password" minLength={6} required />
+              <PasswordInput minLength={6} required />
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full" disabled={pending}>
+            <Button type="submit" className="w-full" size="lg" disabled={pending}>
               {pending ? "Tekshirilmoqda..." : "Davom etish"}
             </Button>
           </form>
@@ -101,18 +104,28 @@ export function RegisterCustomerForm({ callbackUrl }: { callbackUrl?: string }) 
           <form action={handleStep2} className="space-y-4">
             <Button
               type="button"
-              variant="outline"
-              className="w-full"
+              className="w-full bg-[#26A5E4] text-white hover:bg-[#26A5E4]/90"
               render={<a href={`https://t.me/${BOT_USERNAME}?start=register`} target="_blank" rel="noopener noreferrer" />}
             >
               <Send className="size-4" /> Telegram botga o&apos;tish
             </Button>
             <div className="space-y-2">
-              <Label htmlFor="code">Tasdiqlash kodi</Label>
-              <Input id="code" name="code" inputMode="numeric" maxLength={6} placeholder="123456" required />
+              <Label htmlFor="code" className="flex items-center gap-1.5">
+                <KeyRound className="size-3.5" /> Tasdiqlash kodi
+              </Label>
+              <Input
+                id="code"
+                name="code"
+                inputMode="numeric"
+                maxLength={5}
+                placeholder="00000"
+                required
+                className="h-14 text-center text-2xl font-bold tracking-[0.5em]"
+              />
+              <p className="text-xs text-muted-foreground">Botdan kelgan 5 xonali kodni kiriting</p>
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full" disabled={pending}>
+            <Button type="submit" className="w-full" size="lg" disabled={pending}>
               {pending ? "Yakunlanmoqda..." : "Yakunlash"}
             </Button>
             <button
@@ -127,7 +140,7 @@ export function RegisterCustomerForm({ callbackUrl }: { callbackUrl?: string }) 
             </button>
           </form>
         )}
-        <p className="mt-4 text-center text-sm text-muted-foreground">
+        <p className="mt-5 text-center text-sm text-muted-foreground">
           Hisobingiz bormi?{" "}
           <Link href="/login" className="font-medium text-foreground underline underline-offset-4">
             Kirish

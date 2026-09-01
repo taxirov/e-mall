@@ -17,6 +17,11 @@ export type ActionResult<T = undefined> =
   | { ok: true; data: T }
   | { ok: false; error: string };
 
+/** Telegram's contact-share phone often omits the leading "+" — compare digits only. */
+function phonesMatch(a: string, b: string): boolean {
+  return a.replace(/\D/g, "") === b.replace(/\D/g, "");
+}
+
 /** Checked before sending the user off to the Telegram bot, so a taken phone number is caught early. */
 export async function checkPhoneAvailable(phone: unknown): Promise<ActionResult> {
   const parsed = phoneSchema.safeParse(phone);
@@ -68,6 +73,12 @@ export async function registerStore(input: unknown): Promise<ActionResult<{ stor
   if (existingTelegram) {
     return { ok: false, error: "Bu Telegram hisobi allaqachon boshqa foydalanuvchiga bog'langan" };
   }
+  if (!telegramPhone || !phonesMatch(telegramPhone, phone)) {
+    return {
+      ok: false,
+      error: "Telegram orqali ulashgan raqam ro'yxatdan o'tishda kiritgan raqamingiz bilan bir xil bo'lishi kerak",
+    };
+  }
 
   const canonicalStoreName = await canonicalizeLatin(storeName);
   const baseSlug = slugify(canonicalStoreName) || "dokon";
@@ -115,6 +126,12 @@ export async function registerCustomer(input: unknown): Promise<ActionResult> {
   const existingTelegram = await prisma.user.findUnique({ where: { telegramChatId } });
   if (existingTelegram) {
     return { ok: false, error: "Bu Telegram hisobi allaqachon boshqa foydalanuvchiga bog'langan" };
+  }
+  if (!telegramPhone || !phonesMatch(telegramPhone, phone)) {
+    return {
+      ok: false,
+      error: "Telegram orqali ulashgan raqam ro'yxatdan o'tishda kiritgan raqamingiz bilan bir xil bo'lishi kerak",
+    };
   }
 
   const passwordHash = await hashPassword(password);
