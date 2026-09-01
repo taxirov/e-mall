@@ -239,6 +239,7 @@ function StoreContactTab({
 export function OwnerSettings({
   userFullName,
   userPhone,
+  userTelegramPhone,
   storeName,
   storeDescription,
   storeSlug,
@@ -258,6 +259,7 @@ export function OwnerSettings({
 }: {
   userFullName: string;
   userPhone: string;
+  userTelegramPhone: string | null;
   storeName: string;
   storeDescription: string;
   storeSlug: string;
@@ -300,7 +302,7 @@ export function OwnerSettings({
           </TabsList>
         </div>
         <TabsContent value="profile" keepMounted>
-          <ProfileTab fullName={userFullName} phone={userPhone} />
+          <ProfileTab fullName={userFullName} phone={userPhone} telegramPhone={userTelegramPhone} />
         </TabsContent>
         <TabsContent value="store" keepMounted>
           <StoreIdentityTab name={storeName} description={storeDescription} slug={storeSlug} logoUrl={storeLogoUrl} bannerUrl={storeBannerUrl} />

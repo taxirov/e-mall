@@ -9,7 +9,7 @@ export default async function StoreSettingsPage() {
 
   const [store, user] = await Promise.all([
     prisma.store.findUnique({ where: { id: session.user.storeId } }),
-    prisma.user.findUnique({ where: { id: session.user.id }, select: { fullName: true, phone: true } }),
+    prisma.user.findUnique({ where: { id: session.user.id }, select: { fullName: true, phone: true, telegramPhone: true } }),
   ]);
   if (!store || !user) redirect("/login");
 
@@ -17,6 +17,7 @@ export default async function StoreSettingsPage() {
     <OwnerSettings
       userFullName={user.fullName}
       userPhone={user.phone}
+      userTelegramPhone={user.telegramPhone}
       storeName={store.name}
       storeDescription={store.description ?? ""}
       storeSlug={store.slug}

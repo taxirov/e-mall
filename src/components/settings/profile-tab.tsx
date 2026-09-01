@@ -2,13 +2,23 @@
 
 import { useTransition } from "react";
 import { toast } from "sonner";
+import { CheckCircle2, XCircle } from "lucide-react";
 import { updateUserProfile, changePassword } from "@/actions/user-profile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
-export function ProfileTab({ fullName, phone }: { fullName: string; phone: string }) {
+export function ProfileTab({
+  fullName,
+  phone,
+  telegramPhone,
+}: {
+  fullName: string;
+  phone: string;
+  telegramPhone: string | null;
+}) {
   const [pending, startTransition] = useTransition();
   const [passwordPending, startPasswordTransition] = useTransition();
 
@@ -58,6 +68,27 @@ export function ProfileTab({ fullName, phone }: { fullName: string; phone: strin
               <Label htmlFor="phone-display">Telefon raqam</Label>
               <Input id="phone-display" value={phone} disabled />
               <p className="text-xs text-muted-foreground">Telefon raqamni o&apos;zgartirib bo&apos;lmaydi.</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Telegram hisobi</Label>
+              {telegramPhone ? (
+                <div className="flex items-center gap-2 rounded-md border p-2.5">
+                  <Badge variant="default" className="gap-1">
+                    <CheckCircle2 className="size-3" />
+                    Ulangan
+                  </Badge>
+                  <span data-no-transliterate className="text-sm text-muted-foreground">
+                    {telegramPhone}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 rounded-md border p-2.5">
+                  <Badge variant="secondary" className="gap-1 text-muted-foreground">
+                    <XCircle className="size-3" />
+                    Ulanmagan
+                  </Badge>
+                </div>
+              )}
             </div>
             <Button type="submit" disabled={pending}>
               {pending ? "Saqlanmoqda..." : "Saqlash"}

@@ -7,8 +7,11 @@ export default async function AdminSettingsPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { fullName: true, phone: true } });
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { fullName: true, phone: true, telegramPhone: true },
+  });
   if (!user) redirect("/login");
 
-  return <AdminSettings userFullName={user.fullName} userPhone={user.phone} />;
+  return <AdminSettings userFullName={user.fullName} userPhone={user.phone} userTelegramPhone={user.telegramPhone} />;
 }
