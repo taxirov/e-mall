@@ -1,4 +1,5 @@
 import type { NextAuthConfig } from "next-auth";
+import { ROOT_DOMAIN } from "@/lib/domain";
 
 // Edge-safe subset of the Auth.js config (no Prisma/bcrypt — those are
 // Node-only and would break Next.js Middleware's Edge runtime). Used by
@@ -8,6 +9,26 @@ export const authConfig = {
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
   providers: [],
+  // Without this, the session cookie defaults to the exact host that set it
+  // (app.e-mall.uz) — a customer who logs in there stays "logged out" on
+  // e-mall.uz or {store}.e-mall.uz, which don't get sent that cookie. Only
+  // applied in production: locally there's no shared real domain to scope
+  // to, and Auth.js only uses the (domain-incompatible) __Host- prefix in
+  // dev anyway.
+  ...(process.env.NODE_ENV === "production" && {
+    cookies: {
+      sessionToken: {
+        name: "__Secure-authjs.session-token",
+        options: {
+          httpOnly: true,
+          sameSite: "lax" as const,
+          path: "/",
+          secure: true,
+          domain: `.${ROOT_DOMAIN}`,
+        },
+      },
+    },
+  }),
   callbacks: {
     jwt: async ({ token, user }) => {
       if (user) {
