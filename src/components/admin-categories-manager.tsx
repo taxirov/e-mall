@@ -1,16 +1,18 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, Trash2, Pencil, ChevronRight, ChevronDown, Search } from "lucide-react";
-import { createCategory, updateCategory, deleteCategory } from "@/actions/categories";
+import { createCategory, updateCategory, deleteCategory, checkCategoryNameAvailable } from "@/actions/categories";
+import type { NameAvailability } from "@/actions/auth";
 import { useLatinizedSearch } from "@/hooks/use-latinized-search";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ImageUpload } from "@/components/image-upload";
+import { SearchableSelect } from "@/components/searchable-select";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +21,7 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 type Category = { id: string; name: string; parentId: string | null; storeTypeId: string; imageUrl: string | null };
 type StoreType = { id: string; name: string };
@@ -37,6 +39,8 @@ export function AdminCategoriesManager({
   const [editing, setEditing] = useState<Category | null>(null);
   const [newParentId, setNewParentId] = useState<string>("");
   const [newStoreTypeId, setNewStoreTypeId] = useState<string>("");
+  const [newName, setNewName] = useState("");
+  const [nameStatus, setNameStatus] = useState<{ status: "idle" | "checking" } | NameAvailability>({ status: "idle" });
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const searchTerm = useLatinizedSearch(search);
@@ -83,7 +87,52 @@ export function AdminCategoriesManager({
     });
   }
 
-  const parentStoreTypeId = topLevel.find((c) => c.id === newParentId)?.storeTypeId;
+  // Parent-category options are scoped to the chosen store type — a
+  // sub-category always inherits its parent's store type, so picking the
+  // store type first narrows this list down.
+  const parentOptions = useMemo(
+    () => topLevel.filter((c) => c.storeTypeId === newStoreTypeId).map((c) => ({ id: c.id, name: c.name })),
+    [topLevel, newStoreTypeId]
+  );
+  const storeTypeOptions = useMemo(() => storeTypes.map((t) => ({ id: t.id, name: t.name })), [storeTypes]);
+
+  // Switching store type invalidates a previously chosen parent from a
+  // different type.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (newParentId && !parentOptions.some((o) => o.id === newParentId)) setNewParentId("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newStoreTypeId]);
+
+  // Live-checks the name against the DB as it's typed — uniqueness is
+  // scoped to the parent, so re-checks whenever the parent changes too.
+  useEffect(() => {
+    const trimmed = newName.trim();
+    if (trimmed.length < 1) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setNameStatus({ status: "idle" });
+      return;
+    }
+    let cancelled = false;
+    setNameStatus({ status: "checking" });
+    const timeout = setTimeout(async () => {
+      const result = await checkCategoryNameAvailable(trimmed, newParentId || null);
+      if (!cancelled) setNameStatus(result);
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [newName, newParentId]);
+
+  const nameBorderClass =
+    nameStatus.status === "available"
+      ? "border-emerald-500 focus-visible:border-emerald-500 focus-visible:ring-emerald-500/20"
+      : nameStatus.status === "taken"
+        ? "border-amber-600 focus-visible:border-amber-600 focus-visible:ring-amber-600/20"
+        : nameStatus.status === "invalid"
+          ? "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/20"
+          : "";
 
   function handleDelete(id: string) {
     startTransition(async () => {
@@ -96,15 +145,28 @@ export function AdminCategoriesManager({
   }
 
   function handleSubmit(formData: FormData) {
-    const name = formData.get("name") as string;
-    const parentId = (formData.get("parentId") as string) || null;
-    const storeTypeId = (formData.get("storeTypeId") as string) || "";
+    const name = editing ? (formData.get("name") as string) : newName.trim();
     const imageUrl = (formData.get("imageUrl") as string) || null;
+
+    if (!editing) {
+      if (!newStoreTypeId) {
+        toast.error("Do'kon turini tanlang");
+        return;
+      }
+      if (nameStatus.status === "taken") {
+        toast.error("Bu nomdagi kategoriya shu bo'limda allaqachon mavjud");
+        return;
+      }
+      if (nameStatus.status === "invalid") {
+        toast.error(nameStatus.message);
+        return;
+      }
+    }
 
     startTransition(async () => {
       const result = editing
         ? await updateCategory(editing.id, { name, imageUrl })
-        : await createCategory({ name, parentId, storeTypeId, imageUrl });
+        : await createCategory({ name, parentId: newParentId || null, storeTypeId: newStoreTypeId, imageUrl });
       if (result.ok) {
         toast.success(editing ? "Yangilandi" : "Qo'shildi");
         setDialogOpen(false);
@@ -126,6 +188,8 @@ export function AdminCategoriesManager({
               setEditing(null);
               setNewParentId("");
               setNewStoreTypeId("");
+              setNewName("");
+              setNameStatus({ status: "idle" });
             }
           }}
         >
@@ -138,45 +202,58 @@ export function AdminCategoriesManager({
             </DialogHeader>
             <form action={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Nomi</Label>
-                <Input id="name" name="name" defaultValue={editing?.name} required />
+                <Label htmlFor="name">
+                  Nomi <span className="text-destructive">*</span>
+                </Label>
+                {editing ? (
+                  <Input id="name" name="name" defaultValue={editing.name} required />
+                ) : (
+                  <>
+                    <Input
+                      id="name"
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      required
+                      className={cn(nameBorderClass)}
+                    />
+                    {nameStatus.status === "available" && (
+                      <p className="text-xs text-emerald-600">Bu nomdan foydalanish mumkin</p>
+                    )}
+                    {nameStatus.status === "taken" && (
+                      <p className="text-xs text-amber-600">Bu nomdagi kategoriya shu bo&apos;limda allaqachon mavjud</p>
+                    )}
+                    {nameStatus.status === "invalid" && (
+                      <p className="text-xs text-destructive">{nameStatus.message}</p>
+                    )}
+                  </>
+                )}
               </div>
               {!editing && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="parentId">Yuqori kategoriya (ixtiyoriy — bo&apos;sh qoldirilsa, top-daraja kategoriya bo&apos;ladi)</Label>
-                    <Select name="parentId" value={newParentId} onValueChange={(value) => setNewParentId(value ?? "")}>
-                      <SelectTrigger id="parentId" className="w-full">
-                        <SelectValue placeholder="Yo'q — top-daraja" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {topLevel.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name} ({storeTypeNameById.get(c.storeTypeId)})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="storeTypeId">
+                      Do&apos;kon turi <span className="text-destructive">*</span>
+                    </Label>
+                    <SearchableSelect
+                      id="storeTypeId"
+                      options={storeTypeOptions}
+                      value={newStoreTypeId}
+                      onChange={setNewStoreTypeId}
+                      placeholder="Do'kon turini qidiring..."
+                    />
                   </div>
-                  {newParentId ? (
-                    <input type="hidden" name="storeTypeId" value={parentStoreTypeId ?? ""} />
-                  ) : (
-                    <div className="space-y-2">
-                      <Label htmlFor="storeTypeId">Do&apos;kon turi</Label>
-                      <Select name="storeTypeId" value={newStoreTypeId} onValueChange={(value) => setNewStoreTypeId(value ?? "")}>
-                        <SelectTrigger id="storeTypeId" className="w-full">
-                          <SelectValue placeholder="Do'kon turini tanlang" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {storeTypes.map((t) => (
-                            <SelectItem key={t.id} value={t.id}>
-                              {t.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
+                  <div className="space-y-2">
+                    <Label htmlFor="parentId">Yuqori kategoriya (ixtiyoriy — bo&apos;sh qoldirilsa, top-daraja kategoriya bo&apos;ladi)</Label>
+                    <SearchableSelect
+                      id="parentId"
+                      options={parentOptions}
+                      value={newParentId}
+                      onChange={setNewParentId}
+                      placeholder="Yuqori kategoriyani qidiring..."
+                      disabled={!newStoreTypeId}
+                      emptyText="Bu do'kon turida top-daraja kategoriya yo'q"
+                    />
+                  </div>
                 </>
               )}
               <ImageUpload defaultUrl={editing?.imageUrl} />

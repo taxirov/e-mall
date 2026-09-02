@@ -5,6 +5,25 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/authz";
 import { categorySchema } from "@/lib/validations";
 import type { ActionResult } from "./auth";
+import type { NameAvailability } from "./auth";
+
+/**
+ * Live-checked as the category name is typed. Uniqueness is scoped to the
+ * parent (`@@unique([parentId, name])`), so the same name is fine under a
+ * different parent — that's why parentId must be passed in too.
+ */
+export async function checkCategoryNameAvailable(name: unknown, parentId: unknown): Promise<NameAvailability> {
+  await requireRole(["SUPER_ADMIN"]);
+  const trimmed = typeof name === "string" ? name.trim() : "";
+  if (trimmed.length < 1) return { status: "invalid", message: "Nomi kiritilishi shart" };
+  const parent = typeof parentId === "string" && parentId ? parentId : null;
+
+  const existing = await prisma.category.findFirst({
+    where: { parentId: parent, name: { equals: trimmed, mode: "insensitive" } },
+    select: { id: true },
+  });
+  return existing ? { status: "taken" } : { status: "available" };
+}
 
 export async function createCategory(input: unknown): Promise<ActionResult> {
   await requireRole(["SUPER_ADMIN"]);
