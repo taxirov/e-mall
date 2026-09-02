@@ -37,6 +37,7 @@ export function AdminCategoriesManager({
   const [pending, startTransition] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
   const [newParentId, setNewParentId] = useState<string>("");
   const [newStoreTypeId, setNewStoreTypeId] = useState<string>("");
   const [newName, setNewName] = useState("");
@@ -134,11 +135,14 @@ export function AdminCategoriesManager({
           ? "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/20"
           : "";
 
-  function handleDelete(id: string) {
+  function confirmDelete() {
+    if (!deleteTarget) return;
+    const id = deleteTarget.id;
     startTransition(async () => {
       const result = await deleteCategory(id);
       if (result.ok) {
         toast.success("O'chirildi");
+        setDeleteTarget(null);
         router.refresh();
       } else toast.error(result.error);
     });
@@ -267,6 +271,26 @@ export function AdminCategoriesManager({
         </Dialog>
       </div>
 
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Kategoriyani o&apos;chirish</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">{deleteTarget?.name}</span> kategoriyasini o&apos;chirmoqchimisiz?
+            Bu amalni ortga qaytarib bo&apos;lmaydi.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              Bekor qilish
+            </Button>
+            <Button variant="destructive" disabled={pending} onClick={confirmDelete}>
+              Ha, o&apos;chirish
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="relative">
         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -336,7 +360,7 @@ export function AdminCategoriesManager({
                           variant="ghost"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleDelete(c.id);
+                            setDeleteTarget(c);
                           }}
                         >
                           <Trash2 className="size-4" />
@@ -360,7 +384,7 @@ export function AdminCategoriesManager({
                             <Button size="icon" variant="ghost" onClick={() => { setEditing(child); setDialogOpen(true); }}>
                               <Pencil className="size-4" />
                             </Button>
-                            <Button size="icon" variant="ghost" onClick={() => handleDelete(child.id)}>
+                            <Button size="icon" variant="ghost" onClick={() => setDeleteTarget(child)}>
                               <Trash2 className="size-4" />
                             </Button>
                           </div>
