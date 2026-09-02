@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, ChevronRight } from "lucide-react";
+import { Plus, Trash2, Pencil, ChevronRight, ChevronDown, Search } from "lucide-react";
 import { createCategory, updateCategory, deleteCategory } from "@/actions/categories";
+import { useLatinizedSearch } from "@/hooks/use-latinized-search";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { ImageUpload } from "@/components/image-upload";
 import {
   Dialog,
@@ -35,6 +37,9 @@ export function AdminCategoriesManager({
   const [editing, setEditing] = useState<Category | null>(null);
   const [newParentId, setNewParentId] = useState<string>("");
   const [newStoreTypeId, setNewStoreTypeId] = useState<string>("");
+  const [search, setSearch] = useState("");
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const searchTerm = useLatinizedSearch(search);
 
   const topLevel = initialCategories.filter((c) => !c.parentId);
   const childrenByParent = new Map<string, Category[]>();
@@ -43,9 +48,39 @@ export function AdminCategoriesManager({
     childrenByParent.set(c.parentId, [...(childrenByParent.get(c.parentId) ?? []), c]);
   }
   const storeTypeNameById = new Map(storeTypes.map((t) => [t.id, t.name]));
-  const topLevelByStoreType = new Map<string, Category[]>();
-  for (const c of topLevel) {
-    topLevelByStoreType.set(c.storeTypeId, [...(topLevelByStoreType.get(c.storeTypeId) ?? []), c]);
+
+  const isSearching = searchTerm.trim().length > 0;
+  const q = searchTerm.trim().toLowerCase();
+
+  // While searching, each top-level category shows only its matching
+  // children (or all of them, if the top-level name itself matched) and is
+  // force-expanded; groups with no match at all drop out entirely.
+  const visibleTopLevel = useMemo(() => {
+    return topLevel
+      .map((c) => {
+        const children = childrenByParent.get(c.id) ?? [];
+        if (!isSearching) return { category: c, children, matched: true };
+        const selfMatches = c.name.toLowerCase().includes(q);
+        const matchingChildren = children.filter((ch) => ch.name.toLowerCase().includes(q));
+        const matched = selfMatches || matchingChildren.length > 0;
+        return { category: c, children: selfMatches ? children : matchingChildren, matched };
+      })
+      .filter((entry) => entry.matched);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [topLevel, initialCategories, isSearching, q]);
+
+  const topLevelByStoreType = new Map<string, typeof visibleTopLevel>();
+  for (const entry of visibleTopLevel) {
+    topLevelByStoreType.set(entry.category.storeTypeId, [...(topLevelByStoreType.get(entry.category.storeTypeId) ?? []), entry]);
+  }
+
+  function toggleExpanded(id: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   const parentStoreTypeId = topLevel.find((c) => c.id === newParentId)?.storeTypeId;
@@ -155,58 +190,115 @@ export function AdminCategoriesManager({
         </Dialog>
       </div>
 
+      <div className="relative">
+        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Kategoriya yoki subkategoriya qidirish"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
       <div className="space-y-6">
         {storeTypes.map((storeType) => {
-          const categories = topLevelByStoreType.get(storeType.id) ?? [];
-          if (categories.length === 0) return null;
+          const entries = topLevelByStoreType.get(storeType.id) ?? [];
+          if (entries.length === 0) return null;
           return (
             <div key={storeType.id} className="space-y-2">
               <h2 className="text-sm font-medium text-muted-foreground">{storeType.name}</h2>
-              {categories.map((c) => (
-                <div key={c.id} className="rounded-md border">
-                  <div className="flex items-center justify-between px-3 py-2">
-                    <span className="flex items-center gap-2 font-medium">
-                      {c.imageUrl && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={c.imageUrl} alt="" className="size-6 rounded object-cover" />
-                      )}
-                      {c.name}
-                    </span>
-                    <div className="flex gap-1">
-                      <Button size="icon" variant="ghost" onClick={() => { setEditing(c); setDialogOpen(true); }}>
-                        <Pencil className="size-4" />
-                      </Button>
-                      <Button size="icon" variant="ghost" onClick={() => handleDelete(c.id)}>
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  {(childrenByParent.get(c.id) ?? []).map((child) => (
-                    <div key={child.id} className="flex items-center justify-between border-t px-3 py-2 pl-6">
-                      <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <ChevronRight className="size-3.5" />
-                        {child.imageUrl && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={child.imageUrl} alt="" className="size-5 rounded object-cover" />
+              {entries.map(({ category: c, children }) => {
+                const isOpen = isSearching || expanded.has(c.id);
+                return (
+                  <div key={c.id} className="rounded-md border">
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => toggleExpanded(c.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          toggleExpanded(c.id);
+                        }
+                      }}
+                      className="flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left"
+                    >
+                      <span className="flex min-w-0 items-center gap-2 font-medium">
+                        {children.length > 0 ? (
+                          isOpen ? (
+                            <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+                          ) : (
+                            <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                          )
+                        ) : (
+                          <span className="size-4 shrink-0" />
                         )}
-                        {child.name}
+                        {c.imageUrl && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={c.imageUrl} alt="" className="size-6 shrink-0 rounded object-cover" />
+                        )}
+                        <span className="truncate">{c.name}</span>
+                        <Badge variant="secondary" className="shrink-0">
+                          {storeTypeNameById.get(c.storeTypeId)}
+                        </Badge>
                       </span>
-                      <div className="flex gap-1">
-                        <Button size="icon" variant="ghost" onClick={() => { setEditing(child); setDialogOpen(true); }}>
+                      <div className="flex shrink-0 gap-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditing(c);
+                            setDialogOpen(true);
+                          }}
+                        >
                           <Pencil className="size-4" />
                         </Button>
-                        <Button size="icon" variant="ghost" onClick={() => handleDelete(child.id)}>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(c.id);
+                          }}
+                        >
                           <Trash2 className="size-4" />
                         </Button>
                       </div>
                     </div>
-                  ))}
-                </div>
-              ))}
+                    {isOpen &&
+                      children.map((child) => (
+                        <div key={child.id} className="flex items-center justify-between border-t px-3 py-2 pl-9">
+                          <span className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
+                            {child.imageUrl && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={child.imageUrl} alt="" className="size-5 shrink-0 rounded object-cover" />
+                            )}
+                            <span className="truncate">{child.name}</span>
+                            <Badge variant="secondary" className="shrink-0">
+                              {storeTypeNameById.get(child.storeTypeId)}
+                            </Badge>
+                          </span>
+                          <div className="flex shrink-0 gap-1">
+                            <Button size="icon" variant="ghost" onClick={() => { setEditing(child); setDialogOpen(true); }}>
+                              <Pencil className="size-4" />
+                            </Button>
+                            <Button size="icon" variant="ghost" onClick={() => handleDelete(child.id)}>
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                );
+              })}
             </div>
           );
         })}
         {topLevel.length === 0 && <p className="text-sm text-muted-foreground">Hozircha kategoriyalar yo&apos;q</p>}
+        {topLevel.length > 0 && visibleTopLevel.length === 0 && (
+          <p className="text-sm text-muted-foreground">Hech narsa topilmadi</p>
+        )}
       </div>
     </div>
   );
