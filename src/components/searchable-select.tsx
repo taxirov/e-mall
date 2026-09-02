@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { useFloatingPosition } from "@/hooks/use-floating-position";
 import { cn } from "@/lib/utils";
 
 export type SearchableOption = { id: string; name: string };
@@ -28,16 +30,19 @@ export function SearchableSelect({
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const rect = useFloatingPosition(inputRef, open);
 
   const selectedName = options.find((o) => o.id === value)?.name ?? "";
 
   useEffect(() => {
     if (!open) return;
     function handlePointerDown(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-        setQuery("");
-      }
+      const target = e.target as Node;
+      if (containerRef.current?.contains(target) || dropdownRef.current?.contains(target)) return;
+      setOpen(false);
+      setQuery("");
     }
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
@@ -60,6 +65,7 @@ export function SearchableSelect({
       <div className="relative">
         <Input
           id={id}
+          ref={inputRef}
           value={open ? query : selectedName}
           placeholder={disabled ? "—" : placeholder}
           disabled={disabled}
@@ -81,24 +87,31 @@ export function SearchableSelect({
         />
         <ChevronDown className="pointer-events-none absolute top-1/2 right-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
       </div>
-      {open && (
-        <div className="absolute inset-x-0 top-full z-20 mt-1 max-h-56 overflow-y-auto rounded-md border bg-popover p-1 shadow-md">
-          {filtered.length === 0 && <p className="px-2 py-1.5 text-sm text-muted-foreground">{emptyText}</p>}
-          {filtered.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => selectOption(option)}
-              className={cn(
-                "flex w-full items-center rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent",
-                option.id === value && "bg-accent font-medium"
-              )}
-            >
-              {option.name}
-            </button>
-          ))}
-        </div>
-      )}
+      {open &&
+        rect &&
+        createPortal(
+          <div
+            ref={dropdownRef}
+            style={{ position: "fixed", top: rect.top, left: rect.left, width: rect.width }}
+            className="z-50 max-h-56 overflow-y-auto rounded-md border bg-popover p-1 shadow-md"
+          >
+            {filtered.length === 0 && <p className="px-2 py-1.5 text-sm text-muted-foreground">{emptyText}</p>}
+            {filtered.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => selectOption(option)}
+                className={cn(
+                  "flex w-full items-center rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent",
+                  option.id === value && "bg-accent font-medium"
+                )}
+              >
+                {option.name}
+              </button>
+            ))}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
