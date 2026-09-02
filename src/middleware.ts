@@ -74,6 +74,17 @@ export default auth((req) => {
   if (matchedPrefix) {
     const allowedRoles = ROLE_PREFIXES[matchedPrefix];
     const role = req.auth?.user?.role;
+    if (matchedPrefix === "/dashboard/admin") {
+      // TEMPORARY diagnostic — remove once the admin-approval redirect bug is confirmed fixed.
+      const cookieNames = req.cookies.getAll().map((c) => c.name);
+      console.log("[mw-debug]", {
+        method: req.method,
+        hasAuth: !!req.auth,
+        role,
+        cookieNames,
+        hasSessionCookie: cookieNames.some((n) => n.includes("session-token")),
+      });
+    }
     if (!req.auth) {
       const loginUrl = nextUrl.clone();
       loginUrl.pathname = "/login";
