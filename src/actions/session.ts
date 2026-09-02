@@ -2,13 +2,24 @@
 
 import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import { signIn, signOut } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { rootOrigin } from "@/lib/domain";
 import { registerStore, registerCustomer, type ActionResult } from "./auth";
 
 export async function signOutAction() {
+  // Before the session cookie was scoped to all of *.e-mall.uz, it was set
+  // host-only (no Domain attribute) on app.e-mall.uz. That legacy cookie
+  // shares a name with the current one but isn't cleared by signOut()
+  // (which only clears the Domain-scoped variant), so a browser that logged
+  // in both before and after the change can end up sending BOTH — and the
+  // server picks whichever happens to come first, flipping between two
+  // different accounts' sessions. Clearing both name variants here lets
+  // "Chiqish" fully self-heal that instead of requiring a manual cookie wipe.
+  const cookieStore = await cookies();
+  cookieStore.delete("authjs.session-token");
+  cookieStore.delete("__Secure-authjs.session-token");
   await signOut({ redirectTo: "/login" });
 }
 
