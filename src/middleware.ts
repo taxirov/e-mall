@@ -91,6 +91,25 @@ export default auth((req) => {
     return finish(NextResponse.redirect(url));
   }
 
+  if (nextUrl.pathname.startsWith("/dashboard")) {
+    // TEMPORARY diagnostic (round 3) — remove once this recurrence is confirmed fixed.
+    const sessionEntries = cookieHeader
+      .split(";")
+      .map((p) => p.trim())
+      .filter((p) => p.toLowerCase().includes("session-token"))
+      .map((p) => {
+        const eq = p.indexOf("=");
+        return `${p.slice(0, eq)}=…${p.slice(eq + 1).slice(-8)}`;
+      });
+    console.log("[mw-debug3]", {
+      path: nextUrl.pathname,
+      method: req.method,
+      hasAuth: !!req.auth,
+      role: req.auth?.user?.role,
+      sessionEntries,
+    });
+  }
+
   // Role-gated dashboard routes
   const matchedPrefix = Object.keys(ROLE_PREFIXES).find((p) => nextUrl.pathname.startsWith(p));
   if (matchedPrefix) {
