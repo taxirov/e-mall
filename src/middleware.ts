@@ -35,17 +35,24 @@ const ROLE_PREFIXES: Record<string, string[]> = {
 // both before and after that change can end up sending BOTH — same name,
 // different scope — and the server picks whichever the browser happens to
 // order first, flipping between two different sessions on every request.
-// signOut() clears its own (Domain-scoped) cookie but never sees the
-// host-only one, so it can outlive any number of logins. Since middleware
-// runs on every request, it can self-heal this here: whenever the raw
-// Cookie header carries the session-token name more than once, clear the
-// host-only variant on the response — a no-op for anyone with just one.
+//
+// `res.cookies.delete(name)` does NOT fix this: Next's ResponseCookies keeps
+// only one entry per cookie *name* internally, and next-auth's own wrapper
+// re-appends its own (Domain-scoped) session cookie to whatever this
+// middleware returns — so a Map-based delete for the same name is always
+// clobbered by that later append. Writing the raw Set-Cookie header via
+// `.headers.append` instead bypasses that Map entirely: it becomes a
+// genuinely separate header line the browser matches by its (missing)
+// Domain attribute, so it can only ever clear the host-only cookie and
+// never touches the real Domain-scoped one next-auth appends afterward.
 const SESSION_COOKIE_NAMES = ["authjs.session-token", "__Secure-authjs.session-token"];
 
 function dedupeLegacySessionCookie(res: NextResponse, cookieHeader: string): NextResponse {
   for (const name of SESSION_COOKIE_NAMES) {
     const count = cookieHeader.split(";").filter((part) => part.trim().startsWith(`${name}=`)).length;
-    if (count > 1) res.cookies.delete(name);
+    if (count > 1) {
+      res.headers.append("set-cookie", `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; SameSite=Lax`);
+    }
   }
   return res;
 }
