@@ -30,18 +30,40 @@ const ROLE_PREFIXES: Record<string, string[]> = {
   "/dashboard/pos": ["OWNER", "SELLER"],
 };
 
+// Before the session cookie was scoped to all of *.e-mall.uz, it was set
+// host-only (no Domain attribute) on app.e-mall.uz. A browser that logged in
+// both before and after that change can end up sending BOTH — same name,
+// different scope — and the server picks whichever the browser happens to
+// order first, flipping between two different sessions on every request.
+// signOut() clears its own (Domain-scoped) cookie but never sees the
+// host-only one, so it can outlive any number of logins. Since middleware
+// runs on every request, it can self-heal this here: whenever the raw
+// Cookie header carries the session-token name more than once, clear the
+// host-only variant on the response — a no-op for anyone with just one.
+const SESSION_COOKIE_NAMES = ["authjs.session-token", "__Secure-authjs.session-token"];
+
+function dedupeLegacySessionCookie(res: NextResponse, cookieHeader: string): NextResponse {
+  for (const name of SESSION_COOKIE_NAMES) {
+    const count = cookieHeader.split(";").filter((part) => part.trim().startsWith(`${name}=`)).length;
+    if (count > 1) res.cookies.delete(name);
+  }
+  return res;
+}
+
 export default auth((req) => {
   const { nextUrl } = req;
   const host = req.headers.get("host") ?? "";
+  const cookieHeader = req.headers.get("cookie") ?? "";
   const storeSlug = extractStoreSlug(host);
   const appHost = isAppHost(host);
+  const finish = (res: NextResponse) => dedupeLegacySessionCookie(res, cookieHeader);
 
   // Multi-tenant subdomain rewrite: dokon.e-mall.uz/* -> /store/dokon/*
   const isGlobalPath = GLOBAL_PATH_PREFIXES.some((p) => nextUrl.pathname.startsWith(p));
   if (storeSlug && !isGlobalPath) {
     const url = nextUrl.clone();
     url.pathname = `/store/${storeSlug}${nextUrl.pathname}`;
-    return NextResponse.rewrite(url);
+    return finish(NextResponse.rewrite(url));
   }
 
   // Path-based alternative to the subdomain above: e-mall.uz/mall/dokon/* ->
@@ -49,7 +71,7 @@ export default auth((req) => {
   if (!storeSlug && nextUrl.pathname.startsWith("/mall/")) {
     const url = nextUrl.clone();
     url.pathname = nextUrl.pathname.replace(/^\/mall\//, "/store/");
-    return NextResponse.rewrite(url);
+    return finish(NextResponse.rewrite(url));
   }
 
   // e-mall.uz is the public landing page — auth/dashboard pages live on
@@ -58,7 +80,7 @@ export default auth((req) => {
     const isAppOnlyPath = APP_ONLY_PATH_PREFIXES.some((p) => nextUrl.pathname.startsWith(p));
     if (isAppOnlyPath) {
       const url = new URL(`${nextUrl.pathname}${nextUrl.search}`, appOrigin(host));
-      return NextResponse.redirect(url);
+      return finish(NextResponse.redirect(url));
     }
   }
 
@@ -66,7 +88,7 @@ export default auth((req) => {
   if (appHost && nextUrl.pathname === "/") {
     const url = nextUrl.clone();
     url.pathname = "/login";
-    return NextResponse.redirect(url);
+    return finish(NextResponse.redirect(url));
   }
 
   // Role-gated dashboard routes
@@ -78,13 +100,13 @@ export default auth((req) => {
       const loginUrl = nextUrl.clone();
       loginUrl.pathname = "/login";
       loginUrl.searchParams.set("callbackUrl", nextUrl.pathname);
-      return NextResponse.redirect(loginUrl);
+      return finish(NextResponse.redirect(loginUrl));
     }
     if (!role || !allowedRoles.includes(role)) {
       const homeUrl = nextUrl.clone();
       homeUrl.pathname = "/";
       homeUrl.search = "";
-      return NextResponse.redirect(homeUrl);
+      return finish(NextResponse.redirect(homeUrl));
     }
   } else if (nextUrl.pathname.startsWith("/dashboard")) {
     // any other /dashboard/* route just requires being signed in
@@ -92,11 +114,11 @@ export default auth((req) => {
       const loginUrl = nextUrl.clone();
       loginUrl.pathname = "/login";
       loginUrl.searchParams.set("callbackUrl", nextUrl.pathname);
-      return NextResponse.redirect(loginUrl);
+      return finish(NextResponse.redirect(loginUrl));
     }
   }
 
-  return NextResponse.next();
+  return finish(NextResponse.next());
 });
 
 export const config = {
