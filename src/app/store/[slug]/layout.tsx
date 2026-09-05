@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { auth, signOut } from "@/auth";
 import { Button } from "@/components/ui/button";
-import { Store, MapPin, Clock, Phone, ExternalLink } from "lucide-react";
+import { Store, MapPin, Clock, Phone, ExternalLink, ArrowLeft } from "lucide-react";
 import { ONLINE_ORDERING_ENABLED } from "@/lib/config";
 import { ScriptToggle } from "@/components/script-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -21,12 +22,25 @@ export default async function StoreLayout({
   if (!store || store.status !== "ACTIVE") notFound();
 
   const session = await auth();
+  // Same page either way (see middleware.ts), but the subdomain should feel
+  // like the store's own independent site, while /mall/{slug} is clearly
+  // "browsing a store from inside e-mall.uz" — tagged via x-store-view.
+  const isSubdomainView = (await headers()).get("x-store-view") !== "path";
 
   const hasProfileInfo =
     store.address || store.workingHours || store.contactPhone || store.instagramUrl || store.telegramUrl;
 
   return (
-    <div className="flex min-h-svh flex-col">
+    <div className={cn("flex min-h-svh flex-col", isSubdomainView && "storefront-independent")}>
+      {!isSubdomainView && (
+        <Link
+          href="/"
+          className="flex items-center justify-center gap-1.5 bg-brand px-4 py-1.5 text-center text-xs font-medium text-brand-foreground hover:underline"
+        >
+          <ArrowLeft className="size-3.5 shrink-0" />
+          e-mall.uz ichida ko&apos;rilmoqda — barcha do&apos;konlarga qaytish
+        </Link>
+      )}
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
           <Link href="/" className="flex min-w-0 items-center gap-2 font-semibold">

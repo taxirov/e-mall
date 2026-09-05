@@ -41,15 +41,22 @@ export default auth((req) => {
   if (storeSlug && !isGlobalPath) {
     const url = nextUrl.clone();
     url.pathname = `/store/${storeSlug}${nextUrl.pathname}`;
-    return NextResponse.rewrite(url);
+    const headers = new Headers(req.headers);
+    headers.set("x-store-view", "subdomain");
+    return NextResponse.rewrite(url, { request: { headers } });
   }
 
   // Path-based alternative to the subdomain above: e-mall.uz/mall/dokon/* ->
   // /store/dokon/* (same page/layout, just reachable without a subdomain).
+  // Tagged with x-store-view so the storefront layout can tell them apart —
+  // the subdomain is meant to feel like the store's own independent site,
+  // while this path is browsed from inside e-mall.uz itself.
   if (!storeSlug && nextUrl.pathname.startsWith("/mall/")) {
     const url = nextUrl.clone();
     url.pathname = nextUrl.pathname.replace(/^\/mall\//, "/store/");
-    return NextResponse.rewrite(url);
+    const headers = new Headers(req.headers);
+    headers.set("x-store-view", "path");
+    return NextResponse.rewrite(url, { request: { headers } });
   }
 
   // e-mall.uz is the public landing page — auth/dashboard pages live on

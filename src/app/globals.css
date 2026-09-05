@@ -126,6 +126,21 @@
   --brand-muted: oklch(0.269 0.03 260);
 }
 
+/* Store subdomains ({slug}.e-mall.uz) are meant to feel like the store's own
+   independent site rather than a page inside e-mall.uz, so they trade the
+   e-mall blue brand accent for a neutral slate one. */
+.storefront-independent {
+  --brand: #475569;
+  --brand-foreground: oklch(0.985 0 0);
+  --brand-muted: oklch(0.96 0 0);
+}
+
+.dark .storefront-independent {
+  --brand: #94a3b8;
+  --brand-foreground: oklch(0.145 0 0);
+  --brand-muted: oklch(0.269 0 0);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
