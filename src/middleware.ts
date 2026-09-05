@@ -57,24 +57,19 @@ function dedupeSessionCookieHeader(req: NextRequest) {
   if (!raw) return;
 
   const parts = raw.split(";").map((p) => p.trim());
-  let changed = false;
-  let cleaned = parts;
 
   for (const name of SESSION_COOKIE_NAMES) {
-    const matches = cleaned.filter((p) => p.startsWith(`${name}=`));
+    const matches = parts.filter((p) => p.startsWith(`${name}=`));
     if (matches.length > 1) {
       const last = matches[matches.length - 1];
-      cleaned = [...cleaned.filter((p) => !p.startsWith(`${name}=`)), last];
-      changed = true;
-    }
-  }
-
-  if (changed) {
-    try {
-      req.headers.set("cookie", cleaned.join("; "));
-      console.log("[mw-dedupe]", { changed: true, before: raw, after: req.headers.get("cookie") });
-    } catch (err) {
-      console.log("[mw-dedupe] mutation threw", err instanceof Error ? err.message : String(err));
+      const value = last.slice(name.length + 1);
+      // `req.headers.set(...)` alone doesn't work: NextAuth reads the
+      // request's *parsed* cookie jar (req.cookies, a RequestCookies
+      // instance), which caches its own name -> value map the first time
+      // it's built and never re-parses req.headers afterward. Only
+      // `req.cookies.set(...)` updates that same cached map (and, as a
+      // side effect, re-serializes it back into the header too).
+      req.cookies.set(name, value);
     }
   }
 }
