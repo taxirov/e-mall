@@ -72,6 +72,10 @@ function dedupeSessionCookieHeader(req: NextRequest) {
       req.cookies.set(name, value);
     }
   }
+  console.log("[mw-dedupe2]", {
+    headerNow: req.headers.get("cookie"),
+    cookiesGetAll: req.cookies.getAll().map((c) => `${c.name}=…${c.value.slice(-8)}`),
+  });
 }
 
 const authMiddleware = auth((req) => {
@@ -79,6 +83,13 @@ const authMiddleware = auth((req) => {
   const host = req.headers.get("host") ?? "";
   const storeSlug = extractStoreSlug(host);
   const appHost = isAppHost(host);
+
+  console.log("[mw-dedupe3-in-callback]", {
+    hasAuth: !!req.auth,
+    role: req.auth?.user?.role,
+    headerNow: req.headers.get("cookie"),
+    cookiesGetAll: req.cookies.getAll().map((c) => `${c.name}=…${c.value.slice(-8)}`),
+  });
 
   // Multi-tenant subdomain rewrite: dokon.e-mall.uz/* -> /store/dokon/*
   const isGlobalPath = GLOBAL_PATH_PREFIXES.some((p) => nextUrl.pathname.startsWith(p));
