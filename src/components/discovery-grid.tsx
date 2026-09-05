@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Store as StoreIcon, UtensilsCrossed, Search, MapPin, LocateFixed, PackageSearch } from "lucide-react";
+import { Store as StoreIcon, UtensilsCrossed, Search, MapPin, LocateFixed, PackageSearch, ChevronRight } from "lucide-react";
 import { haversineDistanceKm, isWithinRadius, isPointInPolygon, type LatLng } from "@/lib/geo";
 import { useLatinizedSearch } from "@/hooks/use-latinized-search";
 import { Input } from "@/components/ui/input";
@@ -100,7 +100,7 @@ export function DiscoveryGrid({ stores, cafes }: { stores: DiscoveryItem[]; cafe
 
   return (
     <div>
-      <div className="sticky top-14 z-30 -mx-4 space-y-3 bg-background/95 px-4 pt-1 pb-3 backdrop-blur">
+      <div className="sticky top-14 z-30 -mx-4 space-y-3 bg-background/95 px-4 pt-3 pb-3 backdrop-blur">
         <button
           type="button"
           onClick={requestLocation}
@@ -118,12 +118,12 @@ export function DiscoveryGrid({ stores, cafes }: { stores: DiscoveryItem[]; cafe
         </button>
 
         <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Do'kon yoki kafe qidirish"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-12 rounded-full border-none bg-muted pl-10 shadow-none focus-visible:bg-background focus-visible:ring-2"
+            className="h-12 rounded-2xl border-none bg-muted pl-11 text-base shadow-none transition-shadow focus-visible:bg-background focus-visible:shadow-md focus-visible:ring-2 focus-visible:ring-brand/30"
           />
         </div>
 
@@ -132,7 +132,7 @@ export function DiscoveryGrid({ stores, cafes }: { stores: DiscoveryItem[]; cafe
             type="button"
             onClick={() => setTab("stores")}
             className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-all",
+              "flex flex-1 items-center justify-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-semibold transition-all",
               tab === "stores" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -144,7 +144,7 @@ export function DiscoveryGrid({ stores, cafes }: { stores: DiscoveryItem[]; cafe
             type="button"
             onClick={() => setTab("cafes")}
             className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-all",
+              "flex flex-1 items-center justify-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-semibold transition-all",
               tab === "cafes" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -174,12 +174,13 @@ export function DiscoveryGrid({ stores, cafes }: { stores: DiscoveryItem[]; cafe
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-5 pt-4 sm:grid-cols-2 lg:grid-cols-3">
-          {visible.map((item) => (
+        <div className="grid grid-cols-1 gap-5 pt-5 sm:grid-cols-2 lg:grid-cols-3">
+          {visible.map((item, idx) => (
             <a
               key={item.id}
               href={item.href}
-              className="group flex flex-col overflow-hidden rounded-3xl border bg-background shadow-sm transition-all hover:-translate-y-1 hover:border-brand/40 hover:shadow-lg"
+              style={{ animationDelay: `${Math.min(idx, 8) * 60}ms` }}
+              className="group flex fill-mode-backwards animate-in flex-col overflow-hidden rounded-[1.75rem] border bg-background shadow-sm duration-500 fade-in-0 slide-in-from-bottom-3 transition-all hover:-translate-y-1.5 hover:border-brand/40 hover:shadow-2xl hover:shadow-brand/10"
             >
               <div className="relative aspect-[16/9] w-full overflow-hidden bg-muted">
                 {item.bannerUrl || item.logoUrl ? (
@@ -187,13 +188,14 @@ export function DiscoveryGrid({ stores, cafes }: { stores: DiscoveryItem[]; cafe
                   <img
                     src={item.bannerUrl ?? item.logoUrl ?? ""}
                     alt=""
-                    className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    className="size-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />
                 ) : (
-                  <div className="flex size-full items-center justify-center text-muted-foreground/60">
+                  <div className="flex size-full items-center justify-center bg-gradient-to-br from-muted to-muted/50 text-muted-foreground/60">
                     {tab === "stores" ? <StoreIcon className="size-9" /> : <UtensilsCrossed className="size-9" />}
                   </div>
                 )}
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/25 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
                 {item.distanceKm != null && (
                   <span className="absolute top-2.5 right-2.5 rounded-full bg-background/90 px-2.5 py-1 text-xs font-semibold text-foreground shadow-xs backdrop-blur">
                     ~{item.distanceKm < 1 ? "1" : Math.round(item.distanceKm)} km
@@ -206,11 +208,14 @@ export function DiscoveryGrid({ stores, cafes }: { stores: DiscoveryItem[]; cafe
                   </div>
                 )}
               </div>
-              <div className={cn("flex flex-1 flex-col p-4", item.bannerUrl && item.logoUrl ? "pt-6" : "pt-3.5")}>
-                <p className="truncate text-base font-bold">{item.name}</p>
-                <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                  {item.description ?? (tab === "stores" ? "Do'kon tavsifi kiritilmagan" : "Tavsif kiritilmagan")}
-                </p>
+              <div className={cn("flex flex-1 items-start justify-between gap-2 p-4", item.bannerUrl && item.logoUrl ? "pt-6" : "pt-3.5")}>
+                <div className="min-w-0">
+                  <p className="truncate text-base font-bold">{item.name}</p>
+                  <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                    {item.description ?? (tab === "stores" ? "Do'kon tavsifi kiritilmagan" : "Tavsif kiritilmagan")}
+                  </p>
+                </div>
+                <ChevronRight className="mt-0.5 size-4 shrink-0 -translate-x-1 text-muted-foreground opacity-0 transition-all group-hover:translate-x-0 group-hover:text-brand group-hover:opacity-100" />
               </div>
             </a>
           ))}
