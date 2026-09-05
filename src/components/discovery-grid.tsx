@@ -132,11 +132,11 @@ export function DiscoveryGrid({ stores, cafes }: { stores: DiscoveryItem[]; cafe
             type="button"
             onClick={() => setTab("stores")}
             className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-semibold transition-all",
+              "flex flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-full px-2 py-2.5 text-[13px] font-semibold transition-all sm:gap-1.5 sm:px-4 sm:text-sm",
               tab === "stores" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             )}
           >
-            <StoreIcon className="size-4" />
+            <StoreIcon className="size-4 shrink-0" />
             Do&apos;konlar
             <span className="text-xs font-normal text-muted-foreground">{stores.length}</span>
           </button>
@@ -144,12 +144,13 @@ export function DiscoveryGrid({ stores, cafes }: { stores: DiscoveryItem[]; cafe
             type="button"
             onClick={() => setTab("cafes")}
             className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-semibold transition-all",
+              "flex flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-full px-2 py-2.5 text-[13px] font-semibold transition-all sm:gap-1.5 sm:px-4 sm:text-sm",
               tab === "cafes" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             )}
           >
-            <UtensilsCrossed className="size-4" />
-            Kafe va restoranlar
+            <UtensilsCrossed className="size-4 shrink-0" />
+            <span className="sm:hidden">Kafelar</span>
+            <span className="hidden sm:inline">Kafe va restoranlar</span>
             <span className="text-xs font-normal text-muted-foreground">{cafes.length}</span>
           </button>
         </div>
