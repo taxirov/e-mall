@@ -69,7 +69,14 @@ function dedupeSessionCookieHeader(req: NextRequest) {
     }
   }
 
-  if (changed) req.headers.set("cookie", cleaned.join("; "));
+  if (changed) {
+    try {
+      req.headers.set("cookie", cleaned.join("; "));
+      console.log("[mw-dedupe]", { changed: true, before: raw, after: req.headers.get("cookie") });
+    } catch (err) {
+      console.log("[mw-dedupe] mutation threw", err instanceof Error ? err.message : String(err));
+    }
+  }
 }
 
 const authMiddleware = auth((req) => {
