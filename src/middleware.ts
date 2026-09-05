@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import NextAuth from "next-auth";
 import { authConfig } from "@/auth.config";
 import { extractStoreSlug, isAppHost, appOrigin } from "@/lib/domain";
@@ -33,44 +33,57 @@ const ROLE_PREFIXES: Record<string, string[]> = {
 // Before the session cookie was scoped to all of *.e-mall.uz, it was set
 // host-only (no Domain attribute) on app.e-mall.uz. A browser that logged in
 // both before and after that change can end up sending BOTH — same name,
-// different scope — and the server picks whichever the browser happens to
-// order first, flipping between two different sessions on every request.
+// different scope, no way for the server to tell which is which (Domain/Path
+// are stripped by the browser before the Cookie header is even sent) — and
+// whichever one gets read is a coin flip on every single request.
 //
-// `res.cookies.delete(name)` does NOT fix this: Next's ResponseCookies keeps
-// only one entry per cookie *name* internally, and next-auth's own wrapper
-// re-appends its own (Domain-scoped) session cookie to whatever this
-// middleware returns — so a Map-based delete for the same name is always
-// clobbered by that later append. Writing the raw Set-Cookie header via
-// `.headers.append` instead bypasses that Map entirely: it becomes a
-// genuinely separate header line the browser matches by its (missing)
-// Domain attribute, so it can only ever clear the host-only cookie and
-// never touches the real Domain-scoped one next-auth appends afterward.
+// Trying to clean this up on the *response* (Set-Cookie) doesn't work:
+// next-auth's own internal session check runs its own independent read of
+// the same ambiguous header, and if *it* happens to pick the stale cookie,
+// it concludes the session is invalid and clears its OWN (good) cookie right
+// back out — so the response can end up wiping the very cookie a response-side
+// fix just tried to keep. The only reliable fix is to remove the ambiguity
+// from the *request* before next-auth (or our own req.auth) ever reads it.
+//
+// Cookies with the same name and path sort oldest-first in the Cookie header
+// (RFC 6265 §5.4), so the legacy cookie — created first — always appears
+// before the current one. Keeping only the *last* occurrence of each
+// session-cookie name reliably keeps the fresher, correct cookie and drops
+// the stale one, for every read in this request (ours and next-auth's).
 const SESSION_COOKIE_NAMES = ["authjs.session-token", "__Secure-authjs.session-token"];
 
-function dedupeLegacySessionCookie(res: NextResponse, cookieHeader: string): NextResponse {
+function dedupeSessionCookieHeader(req: NextRequest) {
+  const raw = req.headers.get("cookie");
+  if (!raw) return;
+
+  const parts = raw.split(";").map((p) => p.trim());
+  let changed = false;
+  let cleaned = parts;
+
   for (const name of SESSION_COOKIE_NAMES) {
-    const count = cookieHeader.split(";").filter((part) => part.trim().startsWith(`${name}=`)).length;
-    if (count > 1) {
-      res.headers.append("set-cookie", `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; SameSite=Lax`);
+    const matches = cleaned.filter((p) => p.startsWith(`${name}=`));
+    if (matches.length > 1) {
+      const last = matches[matches.length - 1];
+      cleaned = [...cleaned.filter((p) => !p.startsWith(`${name}=`)), last];
+      changed = true;
     }
   }
-  return res;
+
+  if (changed) req.headers.set("cookie", cleaned.join("; "));
 }
 
-export default auth((req) => {
+const authMiddleware = auth((req) => {
   const { nextUrl } = req;
   const host = req.headers.get("host") ?? "";
-  const cookieHeader = req.headers.get("cookie") ?? "";
   const storeSlug = extractStoreSlug(host);
   const appHost = isAppHost(host);
-  const finish = (res: NextResponse) => dedupeLegacySessionCookie(res, cookieHeader);
 
   // Multi-tenant subdomain rewrite: dokon.e-mall.uz/* -> /store/dokon/*
   const isGlobalPath = GLOBAL_PATH_PREFIXES.some((p) => nextUrl.pathname.startsWith(p));
   if (storeSlug && !isGlobalPath) {
     const url = nextUrl.clone();
     url.pathname = `/store/${storeSlug}${nextUrl.pathname}`;
-    return finish(NextResponse.rewrite(url));
+    return NextResponse.rewrite(url);
   }
 
   // Path-based alternative to the subdomain above: e-mall.uz/mall/dokon/* ->
@@ -78,7 +91,7 @@ export default auth((req) => {
   if (!storeSlug && nextUrl.pathname.startsWith("/mall/")) {
     const url = nextUrl.clone();
     url.pathname = nextUrl.pathname.replace(/^\/mall\//, "/store/");
-    return finish(NextResponse.rewrite(url));
+    return NextResponse.rewrite(url);
   }
 
   // e-mall.uz is the public landing page — auth/dashboard pages live on
@@ -87,7 +100,7 @@ export default auth((req) => {
     const isAppOnlyPath = APP_ONLY_PATH_PREFIXES.some((p) => nextUrl.pathname.startsWith(p));
     if (isAppOnlyPath) {
       const url = new URL(`${nextUrl.pathname}${nextUrl.search}`, appOrigin(host));
-      return finish(NextResponse.redirect(url));
+      return NextResponse.redirect(url);
     }
   }
 
@@ -95,26 +108,7 @@ export default auth((req) => {
   if (appHost && nextUrl.pathname === "/") {
     const url = nextUrl.clone();
     url.pathname = "/login";
-    return finish(NextResponse.redirect(url));
-  }
-
-  if (nextUrl.pathname.startsWith("/dashboard")) {
-    // TEMPORARY diagnostic (round 3) — remove once this recurrence is confirmed fixed.
-    const sessionEntries = cookieHeader
-      .split(";")
-      .map((p) => p.trim())
-      .filter((p) => p.toLowerCase().includes("session-token"))
-      .map((p) => {
-        const eq = p.indexOf("=");
-        return `${p.slice(0, eq)}=…${p.slice(eq + 1).slice(-8)}`;
-      });
-    console.log("[mw-debug3]", {
-      path: nextUrl.pathname,
-      method: req.method,
-      hasAuth: !!req.auth,
-      role: req.auth?.user?.role,
-      sessionEntries,
-    });
+    return NextResponse.redirect(url);
   }
 
   // Role-gated dashboard routes
@@ -126,13 +120,13 @@ export default auth((req) => {
       const loginUrl = nextUrl.clone();
       loginUrl.pathname = "/login";
       loginUrl.searchParams.set("callbackUrl", nextUrl.pathname);
-      return finish(NextResponse.redirect(loginUrl));
+      return NextResponse.redirect(loginUrl);
     }
     if (!role || !allowedRoles.includes(role)) {
       const homeUrl = nextUrl.clone();
       homeUrl.pathname = "/";
       homeUrl.search = "";
-      return finish(NextResponse.redirect(homeUrl));
+      return NextResponse.redirect(homeUrl);
     }
   } else if (nextUrl.pathname.startsWith("/dashboard")) {
     // any other /dashboard/* route just requires being signed in
@@ -140,12 +134,17 @@ export default auth((req) => {
       const loginUrl = nextUrl.clone();
       loginUrl.pathname = "/login";
       loginUrl.searchParams.set("callbackUrl", nextUrl.pathname);
-      return finish(NextResponse.redirect(loginUrl));
+      return NextResponse.redirect(loginUrl);
     }
   }
 
-  return finish(NextResponse.next());
+  return NextResponse.next();
 });
+
+export default function middleware(req: NextRequest, event: Parameters<typeof authMiddleware>[1]) {
+  dedupeSessionCookieHeader(req);
+  return authMiddleware(req, event);
+}
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
