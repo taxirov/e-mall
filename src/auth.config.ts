@@ -15,10 +15,25 @@ export const authConfig = {
   // applied in production: locally there's no shared real domain to scope
   // to, and Auth.js only uses the (domain-incompatible) __Host- prefix in
   // dev anyway.
+  //
+  // The "-v2" suffix is deliberate: browsers that logged in before this
+  // domain-wide scoping existed are still holding the old host-only
+  // "__Secure-authjs.session-token" cookie (no Domain attribute) alongside
+  // whatever this scoped one they get now — same name, different scope,
+  // and the server has no way to tell the two apart (Domain/Path aren't
+  // included in the Cookie header the browser sends). Which one gets read
+  // was a coin flip on every request, flipping signed-in identity mid-
+  // session. Every attempt to clean that up server-side (deleting one
+  // variant, deduping the incoming header, even rewriting the parsed
+  // cookie jar directly) got undermined by some cache or internal request
+  // reconstruction still seeing the old ambiguous pair. Renaming the
+  // cookie sidesteps all of that: old browsers' stale cookie just becomes
+  // inert under a name nothing reads anymore, and every fresh login starts
+  // clean under the new name with no possible collision.
   ...(process.env.NODE_ENV === "production" && {
     cookies: {
       sessionToken: {
-        name: "__Secure-authjs.session-token",
+        name: "__Secure-authjs.session-token-v2",
         options: {
           httpOnly: true,
           sameSite: "lax" as const,

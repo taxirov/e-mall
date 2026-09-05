@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import NextAuth from "next-auth";
 import { authConfig } from "@/auth.config";
 import { extractStoreSlug, isAppHost, appOrigin } from "@/lib/domain";
@@ -30,66 +30,11 @@ const ROLE_PREFIXES: Record<string, string[]> = {
   "/dashboard/pos": ["OWNER", "SELLER"],
 };
 
-// Before the session cookie was scoped to all of *.e-mall.uz, it was set
-// host-only (no Domain attribute) on app.e-mall.uz. A browser that logged in
-// both before and after that change can end up sending BOTH — same name,
-// different scope, no way for the server to tell which is which (Domain/Path
-// are stripped by the browser before the Cookie header is even sent) — and
-// whichever one gets read is a coin flip on every single request.
-//
-// Trying to clean this up on the *response* (Set-Cookie) doesn't work:
-// next-auth's own internal session check runs its own independent read of
-// the same ambiguous header, and if *it* happens to pick the stale cookie,
-// it concludes the session is invalid and clears its OWN (good) cookie right
-// back out — so the response can end up wiping the very cookie a response-side
-// fix just tried to keep. The only reliable fix is to remove the ambiguity
-// from the *request* before next-auth (or our own req.auth) ever reads it.
-//
-// Cookies with the same name and path sort oldest-first in the Cookie header
-// (RFC 6265 §5.4), so the legacy cookie — created first — always appears
-// before the current one. Keeping only the *last* occurrence of each
-// session-cookie name reliably keeps the fresher, correct cookie and drops
-// the stale one, for every read in this request (ours and next-auth's).
-const SESSION_COOKIE_NAMES = ["authjs.session-token", "__Secure-authjs.session-token"];
-
-function dedupeSessionCookieHeader(req: NextRequest) {
-  const raw = req.headers.get("cookie");
-  if (!raw) return;
-
-  const parts = raw.split(";").map((p) => p.trim());
-
-  for (const name of SESSION_COOKIE_NAMES) {
-    const matches = parts.filter((p) => p.startsWith(`${name}=`));
-    if (matches.length > 1) {
-      const last = matches[matches.length - 1];
-      const value = last.slice(name.length + 1);
-      // `req.headers.set(...)` alone doesn't work: NextAuth reads the
-      // request's *parsed* cookie jar (req.cookies, a RequestCookies
-      // instance), which caches its own name -> value map the first time
-      // it's built and never re-parses req.headers afterward. Only
-      // `req.cookies.set(...)` updates that same cached map (and, as a
-      // side effect, re-serializes it back into the header too).
-      req.cookies.set(name, value);
-    }
-  }
-  console.log("[mw-dedupe2]", {
-    headerNow: req.headers.get("cookie"),
-    cookiesGetAll: req.cookies.getAll().map((c) => `${c.name}=…${c.value.slice(-8)}`),
-  });
-}
-
-const authMiddleware = auth((req) => {
+export default auth((req) => {
   const { nextUrl } = req;
   const host = req.headers.get("host") ?? "";
   const storeSlug = extractStoreSlug(host);
   const appHost = isAppHost(host);
-
-  console.log("[mw-dedupe3-in-callback]", {
-    hasAuth: !!req.auth,
-    role: req.auth?.user?.role,
-    headerNow: req.headers.get("cookie"),
-    cookiesGetAll: req.cookies.getAll().map((c) => `${c.name}=…${c.value.slice(-8)}`),
-  });
 
   // Multi-tenant subdomain rewrite: dokon.e-mall.uz/* -> /store/dokon/*
   const isGlobalPath = GLOBAL_PATH_PREFIXES.some((p) => nextUrl.pathname.startsWith(p));
@@ -153,11 +98,6 @@ const authMiddleware = auth((req) => {
 
   return NextResponse.next();
 });
-
-export default function middleware(req: NextRequest, event: Parameters<typeof authMiddleware>[1]) {
-  dedupeSessionCookieHeader(req);
-  return authMiddleware(req, event);
-}
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
