@@ -3,8 +3,9 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, BadgeCheck } from "lucide-react";
 import { createUserAsAdmin } from "@/actions/admin-users";
+import { formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +23,15 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-type UserRow = { id: string; fullName: string; phone: string; role: string; storeName: string | null };
+type UserRow = {
+  id: string;
+  fullName: string;
+  phone: string;
+  role: string;
+  storeName: string | null;
+  storeVerified: boolean;
+  createdAt: string;
+};
 type StoreType = { id: string; name: string };
 type StoreOption = { id: string; name: string };
 
@@ -168,6 +177,7 @@ export function AdminUsersManager({
               <TableHead>Telefon</TableHead>
               <TableHead>Turi</TableHead>
               <TableHead>Do&apos;kon</TableHead>
+              <TableHead>Ro&apos;yxatdan o&apos;tgan</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -178,12 +188,24 @@ export function AdminUsersManager({
                 <TableCell>
                   <Badge variant="secondary">{ROLE_LABEL[u.role] ?? u.role}</Badge>
                 </TableCell>
-                <TableCell className="text-muted-foreground">{u.storeName ?? "—"}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  {u.storeName ? (
+                    <span className="inline-flex items-center gap-1">
+                      {u.storeName}
+                      {u.storeVerified && (
+                        <BadgeCheck className="size-3.5 shrink-0 text-brand" aria-label="Tasdiqlangan do'kon" />
+                      )}
+                    </span>
+                  ) : (
+                    "—"
+                  )}
+                </TableCell>
+                <TableCell className="text-muted-foreground">{formatDate(u.createdAt)}</TableCell>
               </TableRow>
             ))}
             {initialUsers.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground">
+                <TableCell colSpan={5} className="text-center text-muted-foreground">
                   Hozircha foydalanuvchilar yo&apos;q
                 </TableCell>
               </TableRow>

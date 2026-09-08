@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Minus, Plus, ShoppingCart, MapPin, Clock } from "lucide-react";
+import { Minus, Plus, ShoppingCart, MapPin, Clock, BadgeCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
@@ -83,7 +83,11 @@ export function CafeOrdering({ slug, cafe }: { slug: string; cafe: EcafeCafeMenu
   return (
     <div className="mx-auto flex min-h-svh w-full max-w-2xl flex-col pb-24">
       <div className="border-b bg-muted/20 px-4 py-5">
-        <h1 className="text-2xl font-bold">{cafe.name}</h1>
+        <h1 className="flex items-center gap-1.5 text-2xl font-bold">
+          {cafe.name}
+          {/* fetchCafeMenu only ever returns a non-active cafe's menu as null — see lib/ecafe.ts. */}
+          <BadgeCheck className="size-5 shrink-0 text-brand" aria-label="Tasdiqlangan kafe" />
+        </h1>
         {cafe.description && <p className="mt-1 text-sm text-muted-foreground">{cafe.description}</p>}
         <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
           {cafe.address && (

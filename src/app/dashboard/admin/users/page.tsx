@@ -5,7 +5,7 @@ export default async function AdminUsersPage() {
   const [users, storeTypes, stores] = await Promise.all([
     prisma.user.findMany({
       orderBy: { createdAt: "desc" },
-      include: { store: { select: { name: true } } },
+      include: { store: { select: { name: true, status: true } } },
     }),
     prisma.storeType.findMany({ orderBy: { name: "asc" } }),
     prisma.store.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
@@ -19,6 +19,8 @@ export default async function AdminUsersPage() {
         phone: u.phone,
         role: u.role,
         storeName: u.store?.name ?? null,
+        storeVerified: u.store?.status === "ACTIVE",
+        createdAt: u.createdAt.toISOString(),
       }))}
       storeTypes={storeTypes.map((t) => ({ id: t.id, name: t.name }))}
       stores={stores}

@@ -19,6 +19,12 @@ export function formatDateTime(date: Date | string): string {
   return `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
 
+/** DD.MM.YYYY — same output on server and client, unlike Intl locale formatting. */
+export function formatDate(date: Date | string): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  return `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()}`;
+}
+
 export function formatTime(date: Date | string): string {
   const d = typeof date === "string" ? new Date(date) : date;
   return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;

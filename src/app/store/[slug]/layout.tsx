@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { auth, signOut } from "@/auth";
 import { Button } from "@/components/ui/button";
-import { Store, MapPin, Clock, Phone, ExternalLink, ArrowLeft } from "lucide-react";
+import { Store, MapPin, Clock, Phone, ExternalLink, ArrowLeft, BadgeCheck } from "lucide-react";
 import { ONLINE_ORDERING_ENABLED } from "@/lib/config";
 import { ScriptToggle } from "@/components/script-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -103,7 +103,11 @@ export default async function StoreLayout({
               )}
             </div>
             <div className="min-w-0 pb-1">
-              <h1 className="truncate text-lg font-bold sm:text-xl">{store.name}</h1>
+              <h1 className="flex items-center gap-1.5 truncate text-lg font-bold sm:text-xl">
+                <span className="truncate">{store.name}</span>
+                {/* This layout already 404s any store that isn't ACTIVE — see the guard above. */}
+                <BadgeCheck className="size-4 shrink-0 text-brand sm:size-5" aria-label="Tasdiqlangan do'kon" />
+              </h1>
               {store.description && <p className="line-clamp-1 text-sm text-muted-foreground">{store.description}</p>}
             </div>
           </div>

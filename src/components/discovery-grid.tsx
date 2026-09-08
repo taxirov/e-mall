@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Store as StoreIcon, UtensilsCrossed, Search, MapPin, LocateFixed, PackageSearch, ChevronRight } from "lucide-react";
+import { Store as StoreIcon, UtensilsCrossed, Search, MapPin, LocateFixed, PackageSearch, ChevronRight, BadgeCheck } from "lucide-react";
 import { haversineDistanceKm, isWithinRadius, isPointInPolygon, type LatLng } from "@/lib/geo";
 import { useLatinizedSearch } from "@/hooks/use-latinized-search";
 import { Input } from "@/components/ui/input";
@@ -211,7 +211,11 @@ export function DiscoveryGrid({ stores, cafes }: { stores: DiscoveryItem[]; cafe
               </div>
               <div className={cn("flex flex-1 items-start justify-between gap-2 p-4", item.bannerUrl && item.logoUrl ? "pt-6" : "pt-3.5")}>
                 <div className="min-w-0">
-                  <p className="truncate text-base font-bold">{item.name}</p>
+                  <p className="flex items-center gap-1 truncate text-base font-bold">
+                    <span className="truncate">{item.name}</span>
+                    {/* Only ever ACTIVE/approved stores and cafes reach this grid — see page.tsx's queries. */}
+                    <BadgeCheck className="size-4 shrink-0 text-brand" aria-label="Tasdiqlangan" />
+                  </p>
                   <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
                     {item.description ?? (tab === "stores" ? "Do'kon tavsifi kiritilmagan" : "Tavsif kiritilmagan")}
                   </p>
