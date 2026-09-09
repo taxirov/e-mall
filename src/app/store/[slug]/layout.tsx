@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { auth, signOut } from "@/auth";
 import { Button } from "@/components/ui/button";
-import { MapPin, Phone, ExternalLink, ArrowLeft, BadgeCheck } from "lucide-react";
+import { MapPin, ExternalLink, ArrowLeft, BadgeCheck } from "lucide-react";
 import { ONLINE_ORDERING_ENABLED } from "@/lib/config";
 import { ScriptToggle } from "@/components/script-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -28,8 +28,7 @@ export default async function StoreLayout({
   // "browsing a store from inside e-mall.uz" — tagged via x-store-view.
   const isSubdomainView = (await headers()).get("x-store-view") !== "path";
 
-  const hasProfileInfo =
-    store.address || store.workingHours || store.contactPhone || store.instagramUrl || store.telegramUrl;
+  const hasProfileInfo = store.address || store.instagramUrl || store.telegramUrl;
 
   return (
     <div className={cn("flex min-h-svh flex-col", isSubdomainView && "storefront-independent")}>
@@ -106,12 +105,6 @@ export default async function StoreLayout({
                     store.address
                   )}
                 </span>
-              )}
-              {store.contactPhone && (
-                <a href={`tel:${store.contactPhone}`} className="flex items-center gap-1.5 hover:text-foreground hover:underline">
-                  <Phone className="size-3.5 shrink-0 text-brand" />
-                  {store.contactPhone}
-                </a>
               )}
               {store.instagramUrl && (
                 <a href={store.instagramUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-foreground hover:underline">
