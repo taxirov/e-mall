@@ -64,6 +64,7 @@ export type EcafeCafeMenu = {
   bannerUrl: string | null;
   address: string | null;
   workingHours: string | null;
+  estimatedDeliveryTime: string | null;
   deliveryFee: number;
   minOrderTotal: number;
   categories: EcafeMenuCategory[];

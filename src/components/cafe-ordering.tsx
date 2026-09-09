@@ -2,8 +2,9 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { Minus, Plus, ShoppingCart, MapPin, BadgeCheck, UtensilsCrossed, ArrowLeft } from "lucide-react";
+import { Minus, Plus, ShoppingCart, MapPin, BadgeCheck, UtensilsCrossed, ArrowLeft, Clock, Star, Bike, Info } from "lucide-react";
 import { MobileTabBar } from "@/components/mobile-tab-bar";
+import { InfoBadges, type InfoBadge } from "@/components/info-badges";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
@@ -83,7 +84,19 @@ export function CafeOrdering({ slug, cafe }: { slug: string; cafe: EcafeCafeMenu
     });
   }
 
-  const hasProfileInfo = cafe.address || cafe.workingHours;
+  const infoBadges: InfoBadge[] = [
+    ...(cafe.estimatedDeliveryTime
+      ? [{ icon: Clock, colorClassName: "bg-violet-100 text-violet-600", value: cafe.estimatedDeliveryTime, label: "yetkazish" }]
+      : []),
+    { icon: Star, colorClassName: "bg-emerald-100 text-emerald-600", value: "– –", label: "reyting" },
+    {
+      icon: Bike,
+      colorClassName: "bg-amber-100 text-amber-600",
+      value: cafe.deliveryFee > 0 ? `${formatSom(cafe.deliveryFee)} so'm` : "Bepul",
+      label: "yetkazish",
+    },
+    ...(cafe.workingHours ? [{ icon: Info, colorClassName: "bg-sky-100 text-sky-600", value: cafe.workingHours, label: "ish tartibi" }] : []),
+  ];
 
   return (
     <div className="mx-auto flex min-h-svh w-full max-w-2xl flex-col pb-24">
@@ -102,18 +115,16 @@ export function CafeOrdering({ slug, cafe }: { slug: string; cafe: EcafeCafeMenu
               {/* fetchCafeMenu only ever returns a non-active cafe's menu as null — see lib/ecafe.ts. */}
               <BadgeCheck className="size-4 shrink-0 text-brand" aria-label="Tasdiqlangan kafe" />
             </p>
-            {cafe.workingHours && <p className="truncate text-xs text-muted-foreground">{cafe.workingHours}</p>}
           </div>
           <div className="size-10 shrink-0" />
         </div>
-        {hasProfileInfo && (
+        <div className="border-t"><InfoBadges items={infoBadges} /></div>
+        {cafe.address && (
           <div className="border-t px-4 py-2">
             <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-              {cafe.address && (
-                <span className="flex items-center gap-1.5">
-                  <MapPin className="size-3.5 shrink-0 text-brand" /> {cafe.address}
-                </span>
-              )}
+              <span className="flex items-center gap-1.5">
+                <MapPin className="size-3.5 shrink-0 text-brand" /> {cafe.address}
+              </span>
             </div>
           </div>
         )}
