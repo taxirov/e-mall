@@ -74,7 +74,7 @@ export async function SiteHeader() {
           <div className="flex items-center gap-2">
             <ScriptToggle className="hidden sm:flex" />
             <ThemeToggle className="hidden sm:flex" />
-            <Button render={<Link href={`${appUrl}/login`} />} nativeButton={false} variant="ghost" size="sm">
+            <Button render={<Link href="/login" />} nativeButton={false} variant="ghost" size="sm">
               Kirish
             </Button>
             <Button render={<Link href={`${appUrl}/register`} />} nativeButton={false} size="sm">

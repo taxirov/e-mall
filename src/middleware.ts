@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import NextAuth from "next-auth";
 import { authConfig } from "@/auth.config";
-import { extractStoreSlug, isAppHost, appOrigin } from "@/lib/domain";
+import { extractStoreSlug, isAppHost, appOrigin, rootOrigin } from "@/lib/domain";
 
 // Uses the Edge-safe auth config (no Prisma) since middleware runs on the Edge runtime.
 const { auth } = NextAuth(authConfig);
@@ -20,9 +20,13 @@ const GLOBAL_PATH_PREFIXES = [
   "/offline",
 ];
 
-// The subset of GLOBAL_PATH_PREFIXES that live exclusively on app.e-mall.uz —
-// e-mall.uz itself is the public landing page and redirects these over.
-const APP_ONLY_PATH_PREFIXES = ["/dashboard", "/login", "/register", "/register-customer"];
+// Store-owner/admin pages — live on app.e-mall.uz only.
+const APP_ONLY_PATH_PREFIXES = ["/dashboard", "/register"];
+
+// Customer-facing auth pages — canonically live on the root marketing domain
+// (e-mall.uz), but also work as-is on app.e-mall.uz so owners/admins can sign
+// in there directly; only a store's own subdomain sends them to the root.
+const CUSTOMER_AUTH_PATH_PREFIXES = ["/login", "/register-customer"];
 
 const ROLE_PREFIXES: Record<string, string[]> = {
   "/dashboard/admin": ["SUPER_ADMIN"],
@@ -59,14 +63,22 @@ export default auth((req) => {
     return NextResponse.rewrite(url, { request: { headers } });
   }
 
-  // e-mall.uz is the public landing page and store subdomains are for
-  // browsing that store only — auth/dashboard pages live on app.e-mall.uz
-  // only, so send those requests over there regardless of which host
-  // (root domain or a store's own subdomain) they were requested on.
+  // Store-owner/admin pages live on app.e-mall.uz only, wherever they were requested from.
   if (!appHost) {
     const isAppOnlyPath = APP_ONLY_PATH_PREFIXES.some((p) => nextUrl.pathname.startsWith(p));
     if (isAppOnlyPath) {
       const url = new URL(`${nextUrl.pathname}${nextUrl.search}`, appOrigin(host));
+      return NextResponse.redirect(url);
+    }
+  }
+
+  // Customer login/registration renders fine on either e-mall.uz or
+  // app.e-mall.uz — only a store's own subdomain (a third, unrelated host)
+  // sends it over to the root domain instead.
+  if (storeSlug) {
+    const isCustomerAuthPath = CUSTOMER_AUTH_PATH_PREFIXES.some((p) => nextUrl.pathname.startsWith(p));
+    if (isCustomerAuthPath) {
+      const url = new URL(`${nextUrl.pathname}${nextUrl.search}`, rootOrigin(host));
       return NextResponse.redirect(url);
     }
   }
