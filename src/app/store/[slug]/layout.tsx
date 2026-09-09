@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
-import { auth, signOut } from "@/auth";
+import { auth } from "@/auth";
 import { Button } from "@/components/ui/button";
 import { MapPin, ExternalLink, ArrowLeft, BadgeCheck, Clock, Star, Info } from "lucide-react";
 import { ONLINE_ORDERING_ENABLED } from "@/lib/config";
@@ -67,24 +67,10 @@ export default async function StoreLayout({
             <ScriptToggle className="hidden sm:flex" />
             <ThemeToggle className="hidden sm:flex" />
             <HeaderSearchButton />
-            {session?.user && (
-              <>
-                {ONLINE_ORDERING_ENABLED && (
-                  <Button render={<Link href="/orders" />} nativeButton={false} variant="ghost" size="sm" className="hidden sm:inline-flex">
-                    Buyurtmalarim
-                  </Button>
-                )}
-                <form
-                  action={async () => {
-                    "use server";
-                    await signOut({ redirectTo: "/" });
-                  }}
-                >
-                  <Button size="sm" variant="outline" type="submit">
-                    Chiqish
-                  </Button>
-                </form>
-              </>
+            {session?.user && ONLINE_ORDERING_ENABLED && (
+              <Button render={<Link href="/orders" />} nativeButton={false} variant="ghost" size="sm" className="hidden sm:inline-flex">
+                Buyurtmalarim
+              </Button>
             )}
           </div>
         </div>

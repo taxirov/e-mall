@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { auth } from "@/auth";
+import { auth, signOut } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { SiteHeader } from "@/components/site-header";
 import { MobileTabBar } from "@/components/mobile-tab-bar";
 import { ProfileTab } from "@/components/settings/profile-tab";
-import { Receipt, Heart, ChevronRight } from "lucide-react";
+import { Receipt, Heart, ChevronRight, LogOut } from "lucide-react";
 
 export default async function AccountPage() {
   const session = await auth();
@@ -39,6 +39,21 @@ export default async function AccountPage() {
               <ChevronRight className="size-4 text-muted-foreground" />
             </Link>
           </div>
+
+          <form
+            action={async () => {
+              "use server";
+              await signOut({ redirectTo: "/" });
+            }}
+          >
+            <button
+              type="submit"
+              className="flex w-full items-center gap-3 rounded-2xl border px-4 py-3.5 text-sm font-medium text-destructive transition-colors hover:bg-destructive/5"
+            >
+              <LogOut className="size-4" />
+              Chiqish
+            </button>
+          </form>
         </div>
       </main>
       <MobileTabBar />
