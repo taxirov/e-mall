@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Minus, Plus, ShoppingCart, MapPin, Clock, BadgeCheck } from "lucide-react";
+import { Minus, Plus, ShoppingCart, MapPin, Clock, BadgeCheck, UtensilsCrossed } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
@@ -14,6 +14,7 @@ import { LocationPicker } from "@/components/location-picker";
 import { cafeOrigin, type EcafeCafeMenu, type EcafeMenuItem, type EcafeMenuItemVariant } from "@/lib/ecafe";
 import { submitCafeOrder } from "@/actions/cafe-order";
 import { formatSom } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 /** Cart is keyed by menuItemId, or `${menuItemId}::${variantId}` when the item has variants. */
 function cartKey(itemId: string, variantId?: string | null) {
@@ -107,7 +108,7 @@ export function CafeOrdering({ slug, cafe }: { slug: string; cafe: EcafeCafeMenu
         {cafe.categories.map((category) => (
           <section key={category.id}>
             <h2 className="mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">{category.name}</h2>
-            <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {category.items.map((item) => {
                 const hasVariants = item.variants.length > 0;
                 const key = cartKey(item.id);
@@ -117,43 +118,69 @@ export function CafeOrdering({ slug, cafe }: { slug: string; cafe: EcafeCafeMenu
                   : qty;
 
                 return (
-                  <Card key={item.id}>
-                    <CardContent className="flex items-center justify-between gap-3 py-3">
-                      <div className="flex min-w-0 items-center gap-3">
-                        {item.imageUrl && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={item.imageUrl} alt="" className="size-14 shrink-0 rounded-md object-cover" />
-                        )}
-                        <div className="min-w-0">
-                          <p className="font-medium">{item.name}</p>
-                          {item.description && <p className="truncate text-sm text-muted-foreground">{item.description}</p>}
-                          <p className="mt-1 text-sm font-semibold text-brand">
-                            {hasVariants
-                              ? `${formatSom(Math.min(...item.variants.map((v) => v.price)))} so'mdan`
-                              : `${formatSom(item.price)} so'm`}
-                          </p>
-                        </div>
-                      </div>
-
-                      {hasVariants ? (
-                        <Button size="sm" variant={itemCartQty > 0 ? "default" : "outline"} onClick={() => setVariantPickerItem(item)}>
-                          {itemCartQty > 0 ? `Tanlangan (${itemCartQty})` : "Tanlash"}
-                        </Button>
-                      ) : qty === 0 ? (
-                        <Button size="sm" onClick={() => addToCart(key, 1)}>
-                          Qo&apos;shish
-                        </Button>
+                  <Card key={item.id} className="overflow-hidden transition-shadow hover:shadow-md">
+                    <div className="relative aspect-square overflow-hidden bg-muted">
+                      {item.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={item.imageUrl} alt="" className="size-full object-cover" />
                       ) : (
-                        <div className="flex items-center gap-2">
-                          <Button size="icon-sm" variant="outline" onClick={() => addToCart(key, -1)}>
-                            <Minus className="size-3.5" />
-                          </Button>
-                          <span className="w-4 text-center text-sm font-medium">{qty}</span>
-                          <Button size="icon-sm" variant="outline" onClick={() => addToCart(key, 1)}>
-                            <Plus className="size-3.5" />
-                          </Button>
+                        <div className="flex size-full items-center justify-center">
+                          <UtensilsCrossed className="size-6 text-muted-foreground" />
                         </div>
                       )}
+
+                      {hasVariants ? (
+                        <button
+                          type="button"
+                          onClick={() => setVariantPickerItem(item)}
+                          className={cn(
+                            "absolute right-2 bottom-2 rounded-full px-3 py-1.5 text-xs font-semibold shadow-md transition-colors",
+                            itemCartQty > 0 ? "bg-brand text-brand-foreground" : "bg-background text-foreground"
+                          )}
+                        >
+                          {itemCartQty > 0 ? `Tanlangan (${itemCartQty})` : "Tanlash"}
+                        </button>
+                      ) : qty === 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => addToCart(key, 1)}
+                          aria-label="Savatga qo'shish"
+                          className="absolute right-2 bottom-2 flex size-8 items-center justify-center rounded-full bg-brand text-brand-foreground shadow-md transition-transform active:scale-90"
+                        >
+                          <Plus className="size-4" />
+                        </button>
+                      ) : (
+                        <div className="absolute right-2 bottom-2 flex items-center gap-1.5 rounded-full bg-background px-1.5 py-1 shadow-md">
+                          <button
+                            type="button"
+                            onClick={() => addToCart(key, -1)}
+                            aria-label="Kamaytirish"
+                            className="flex size-6 items-center justify-center rounded-full hover:bg-muted"
+                          >
+                            <Minus className="size-3.5" />
+                          </button>
+                          <span className="w-4 text-center text-sm font-medium">{qty}</span>
+                          <button
+                            type="button"
+                            onClick={() => addToCart(key, 1)}
+                            aria-label="Ko'paytirish"
+                            className="flex size-6 items-center justify-center rounded-full bg-brand text-brand-foreground"
+                          >
+                            <Plus className="size-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <CardContent className="p-3">
+                      <p className="line-clamp-2 text-sm font-medium">{item.name}</p>
+                      {item.description && (
+                        <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{item.description}</p>
+                      )}
+                      <p className="mt-1 text-sm font-semibold text-brand">
+                        {hasVariants
+                          ? `${formatSom(Math.min(...item.variants.map((v) => v.price)))} so'mdan`
+                          : `${formatSom(item.price)} so'm`}
+                      </p>
                     </CardContent>
                   </Card>
                 );

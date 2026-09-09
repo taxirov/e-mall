@@ -1,6 +1,5 @@
 /**
- * Online ordering (cart + checkout) on store subdomains is built but
- * intentionally turned off for now — browsing (products, prices, stock) stays
- * live. Flip this on once the ordering flow is ready to go live for real.
+ * Online ordering (cart + checkout) on store subdomains — live as of
+ * 2026-09-09.
  */
-export const ONLINE_ORDERING_ENABLED = false;
+export const ONLINE_ORDERING_ENABLED = true;
