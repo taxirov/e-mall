@@ -4,11 +4,12 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { auth, signOut } from "@/auth";
 import { Button } from "@/components/ui/button";
-import { MapPin, ExternalLink, ArrowLeft, BadgeCheck } from "lucide-react";
+import { MapPin, ExternalLink, ArrowLeft, BadgeCheck, Clock, Star, Info } from "lucide-react";
 import { ONLINE_ORDERING_ENABLED } from "@/lib/config";
 import { ScriptToggle } from "@/components/script-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { MobileTabBar } from "@/components/mobile-tab-bar";
+import { InfoBadges, type InfoBadge } from "@/components/info-badges";
 import { cn } from "@/lib/utils";
 
 export default async function StoreLayout({
@@ -29,6 +30,17 @@ export default async function StoreLayout({
   const isSubdomainView = (await headers()).get("x-store-view") !== "path";
 
   const hasProfileInfo = store.address || store.instagramUrl || store.telegramUrl;
+
+  const infoBadges: InfoBadge[] = [
+    ...(store.estimatedDeliveryTime
+      ? [{ icon: Clock, colorClassName: "bg-violet-100 text-violet-600", value: store.estimatedDeliveryTime, label: "yetkazish" }]
+      : []),
+    // No review system exists yet — shown as an explicit "no data" placeholder rather than a fabricated number.
+    { icon: Star, colorClassName: "bg-emerald-100 text-emerald-600", value: "– –", label: "reyting" },
+    ...(store.workingHours
+      ? [{ icon: Info, colorClassName: "bg-sky-100 text-sky-600", value: store.workingHours, label: "ish tartibi" }]
+      : []),
+  ];
 
   return (
     <div className={cn("flex min-h-svh flex-col", isSubdomainView && "storefront-independent")}>
@@ -57,7 +69,6 @@ export default async function StoreLayout({
               {/* This layout already 404s any store that isn't ACTIVE — see the guard above. */}
               <BadgeCheck className="size-4 shrink-0 text-brand" aria-label="Tasdiqlangan do'kon" />
             </p>
-            {store.workingHours && <p className="truncate text-xs text-muted-foreground">{store.workingHours}</p>}
           </div>
 
           {session?.user ? (
@@ -89,6 +100,12 @@ export default async function StoreLayout({
               </Button>
             </div>
           )}
+        </div>
+
+        <div className="border-t">
+          <div className="mx-auto max-w-5xl">
+            <InfoBadges items={infoBadges} />
+          </div>
         </div>
 
         {hasProfileInfo && (

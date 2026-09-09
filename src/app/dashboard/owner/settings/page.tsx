@@ -30,6 +30,7 @@ export default async function StoreSettingsPage() {
       storeServicePolygon={store.servicePolygon as { lat: number; lng: number }[] | null}
       storeLocationUrl={store.locationUrl ?? ""}
       storeWorkingHours={store.workingHours ?? ""}
+      storeEstimatedDeliveryTime={store.estimatedDeliveryTime ?? ""}
       storeContactPhone={store.contactPhone}
       storeInstagramUrl={store.instagramUrl ?? ""}
       storeTelegramUrl={store.telegramUrl ?? ""}

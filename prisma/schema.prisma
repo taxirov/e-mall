@@ -125,6 +125,8 @@ model Store {
   servicePolygon       Json?
   locationUrl          String?
   workingHours         String?
+  /// Free-text delivery estimate the owner types in themselves (e.g. "15-25 daqiqa") — shown as a badge on the storefront. Null hides the badge rather than guessing a number.
+  estimatedDeliveryTime String?
   contactPhone         String?
   instagramUrl         String?
   telegramUrl          String?

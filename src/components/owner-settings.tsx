@@ -118,6 +118,7 @@ function StoreContactTab({
   servicePolygon,
   locationUrl,
   workingHours,
+  estimatedDeliveryTime,
   contactPhone,
   instagramUrl,
   telegramUrl,
@@ -130,6 +131,7 @@ function StoreContactTab({
   servicePolygon: { lat: number; lng: number }[] | null;
   locationUrl: string;
   workingHours: string;
+  estimatedDeliveryTime: string;
   contactPhone: string | null;
   instagramUrl: string;
   telegramUrl: string;
@@ -155,6 +157,7 @@ function StoreContactTab({
         servicePolygon: serviceMode === "polygon" ? polygon : null,
         locationUrl: formData.get("locationUrl"),
         workingHours: formData.get("workingHours"),
+        estimatedDeliveryTime: formData.get("estimatedDeliveryTime"),
         contactPhone: formData.get("contactPhone"),
         instagramUrl: formData.get("instagramUrl"),
         telegramUrl: formData.get("telegramUrl"),
@@ -216,6 +219,18 @@ function StoreContactTab({
             <Input id="workingHours" name="workingHours" defaultValue={workingHours} placeholder="Dush-Shan: 09:00 - 21:00" />
           </div>
           <div className="space-y-2">
+            <Label htmlFor="estimatedDeliveryTime">Taxminiy yetkazib berish vaqti (ixtiyoriy)</Label>
+            <Input
+              id="estimatedDeliveryTime"
+              name="estimatedDeliveryTime"
+              defaultValue={estimatedDeliveryTime}
+              placeholder="15-25 daqiqa"
+            />
+            <p className="text-xs text-muted-foreground">
+              Do&apos;koningiz sahifasida badge sifatida ko&apos;rsatiladi. Bo&apos;sh qoldirilsa, chiqmaydi.
+            </p>
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="contactPhone">Aloqa uchun telefon raqami (ixtiyoriy)</Label>
             <PhoneInput id="contactPhone" name="contactPhone" defaultValue={contactPhone} required={false} />
           </div>
@@ -252,6 +267,7 @@ export function OwnerSettings({
   storeServicePolygon,
   storeLocationUrl,
   storeWorkingHours,
+  storeEstimatedDeliveryTime,
   storeContactPhone,
   storeInstagramUrl,
   storeTelegramUrl,
@@ -272,6 +288,7 @@ export function OwnerSettings({
   storeServicePolygon: { lat: number; lng: number }[] | null;
   storeLocationUrl: string;
   storeWorkingHours: string;
+  storeEstimatedDeliveryTime: string;
   storeContactPhone: string | null;
   storeInstagramUrl: string;
   storeTelegramUrl: string;
@@ -316,6 +333,7 @@ export function OwnerSettings({
             servicePolygon={storeServicePolygon}
             locationUrl={storeLocationUrl}
             workingHours={storeWorkingHours}
+            estimatedDeliveryTime={storeEstimatedDeliveryTime}
             contactPhone={storeContactPhone}
             instagramUrl={storeInstagramUrl}
             telegramUrl={storeTelegramUrl}
