@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Minus, Plus, ShoppingCart, MapPin, Clock, BadgeCheck, UtensilsCrossed } from "lucide-react";
+import Link from "next/link";
+import { Minus, Plus, ShoppingCart, MapPin, BadgeCheck, UtensilsCrossed, ArrowLeft } from "lucide-react";
+import { MobileTabBar } from "@/components/mobile-tab-bar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
@@ -81,28 +83,41 @@ export function CafeOrdering({ slug, cafe }: { slug: string; cafe: EcafeCafeMenu
     });
   }
 
+  const hasProfileInfo = cafe.address || cafe.workingHours;
+
   return (
     <div className="mx-auto flex min-h-svh w-full max-w-2xl flex-col pb-24">
-      <div className="border-b bg-muted/20 px-4 py-5">
-        <h1 className="flex items-center gap-1.5 text-2xl font-bold">
-          {cafe.name}
-          {/* fetchCafeMenu only ever returns a non-active cafe's menu as null — see lib/ecafe.ts. */}
-          <BadgeCheck className="size-5 shrink-0 text-brand" aria-label="Tasdiqlangan kafe" />
-        </h1>
-        {cafe.description && <p className="mt-1 text-sm text-muted-foreground">{cafe.description}</p>}
-        <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
-          {cafe.address && (
-            <span className="flex items-center gap-1">
-              <MapPin className="size-3.5" /> {cafe.address}
-            </span>
-          )}
-          {cafe.workingHours && (
-            <span className="flex items-center gap-1">
-              <Clock className="size-3.5" /> {cafe.workingHours}
-            </span>
-          )}
+      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
+        <div className="flex h-16 items-center gap-2 px-2 sm:px-4">
+          <Link
+            href="/"
+            aria-label="Orqaga"
+            className="flex size-10 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <ArrowLeft className="size-5" />
+          </Link>
+          <div className="min-w-0 flex-1 text-center">
+            <p className="flex items-center justify-center gap-1 truncate font-bold">
+              <span className="truncate">{cafe.name}</span>
+              {/* fetchCafeMenu only ever returns a non-active cafe's menu as null — see lib/ecafe.ts. */}
+              <BadgeCheck className="size-4 shrink-0 text-brand" aria-label="Tasdiqlangan kafe" />
+            </p>
+            {cafe.workingHours && <p className="truncate text-xs text-muted-foreground">{cafe.workingHours}</p>}
+          </div>
+          <div className="size-10 shrink-0" />
         </div>
-      </div>
+        {hasProfileInfo && (
+          <div className="border-t px-4 py-2">
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              {cafe.address && (
+                <span className="flex items-center gap-1.5">
+                  <MapPin className="size-3.5 shrink-0 text-brand" /> {cafe.address}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+      </header>
 
       <div className="flex-1 space-y-6 px-4 py-5">
         {cafe.categories.map((category) => (
@@ -194,7 +209,7 @@ export function CafeOrdering({ slug, cafe }: { slug: string; cafe: EcafeCafeMenu
       </div>
 
       {cartCount > 0 && (
-        <div className="fixed inset-x-0 bottom-0 mx-auto max-w-2xl border-t bg-background p-3">
+        <div className="fixed inset-x-0 bottom-16 z-30 mx-auto max-w-2xl border-t bg-background p-3 sm:bottom-0">
           <Button className="w-full" size="lg" onClick={() => setCartOpen(true)}>
             <ShoppingCart className="size-4" />
             Savat ({cartCount}) — {formatSom(subtotal)} so&apos;m
@@ -308,6 +323,7 @@ export function CafeOrdering({ slug, cafe }: { slug: string; cafe: EcafeCafeMenu
           )}
         </SheetContent>
       </Sheet>
+      <MobileTabBar />
     </div>
   );
 }

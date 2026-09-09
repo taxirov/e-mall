@@ -4,10 +4,11 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { auth, signOut } from "@/auth";
 import { Button } from "@/components/ui/button";
-import { Store, MapPin, Clock, Phone, ExternalLink, ArrowLeft, BadgeCheck } from "lucide-react";
+import { MapPin, Phone, ExternalLink, ArrowLeft, BadgeCheck } from "lucide-react";
 import { ONLINE_ORDERING_ENABLED } from "@/lib/config";
 import { ScriptToggle } from "@/components/script-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { MobileTabBar } from "@/components/mobile-tab-bar";
 import { cn } from "@/lib/utils";
 
 export default async function StoreLayout({
@@ -42,22 +43,30 @@ export default async function StoreLayout({
         </Link>
       )}
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-          <Link href="/" className="flex min-w-0 items-center gap-2 font-semibold">
-            {store.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={store.logoUrl} alt="" className="size-6 shrink-0 rounded-full object-cover" />
-            ) : (
-              <Store className="size-5 shrink-0" />
-            )}
-            <span className="truncate">{store.name}</span>
+        <div className="mx-auto flex h-16 max-w-5xl items-center gap-2 px-2 sm:px-4">
+          <Link
+            href="/"
+            aria-label="Orqaga"
+            className="flex size-10 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <ArrowLeft className="size-5" />
           </Link>
+
+          <div className="min-w-0 flex-1 text-center">
+            <p className="flex items-center justify-center gap-1 truncate font-bold">
+              <span className="truncate">{store.name}</span>
+              {/* This layout already 404s any store that isn't ACTIVE — see the guard above. */}
+              <BadgeCheck className="size-4 shrink-0 text-brand" aria-label="Tasdiqlangan do'kon" />
+            </p>
+            {store.workingHours && <p className="truncate text-xs text-muted-foreground">{store.workingHours}</p>}
+          </div>
+
           {session?.user ? (
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="flex shrink-0 items-center gap-1">
               <ScriptToggle className="hidden sm:flex" />
               <ThemeToggle className="hidden sm:flex" />
               {ONLINE_ORDERING_ENABLED && (
-                <Button render={<Link href="/orders" />} nativeButton={false} variant="ghost" size="sm">
+                <Button render={<Link href="/orders" />} nativeButton={false} variant="ghost" size="sm" className="hidden sm:inline-flex">
                   Buyurtmalarim
                 </Button>
               )}
@@ -73,7 +82,7 @@ export default async function StoreLayout({
               </form>
             </div>
           ) : (
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="flex shrink-0 items-center gap-1">
               <ScriptToggle className="hidden sm:flex" />
               <ThemeToggle className="hidden sm:flex" />
               <Button render={<Link href="/login" />} nativeButton={false} size="sm" variant="outline">
@@ -82,38 +91,10 @@ export default async function StoreLayout({
             </div>
           )}
         </div>
-      </header>
 
-      {store.bannerUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={store.bannerUrl} alt="" className="h-32 w-full bg-muted object-cover sm:h-48" />
-      ) : (
-        <div className="h-16 w-full bg-[radial-gradient(ellipse_80%_100%_at_50%_-20%,var(--brand-muted),transparent)] sm:h-20" />
-      )}
-
-      <div className="border-b bg-background">
-        <div className={cn("mx-auto max-w-5xl px-4 pb-4", store.bannerUrl ? "-mt-8 sm:-mt-10" : "-mt-2")}>
-          <div className="flex items-end gap-3">
-            <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-4 border-background bg-muted shadow-md sm:size-20">
-              {store.logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={store.logoUrl} alt="" className="size-full object-cover" />
-              ) : (
-                <Store className="size-7 text-muted-foreground sm:size-8" />
-              )}
-            </div>
-            <div className="min-w-0 pb-1">
-              <h1 className="flex items-center gap-1.5 truncate text-lg font-bold sm:text-xl">
-                <span className="truncate">{store.name}</span>
-                {/* This layout already 404s any store that isn't ACTIVE — see the guard above. */}
-                <BadgeCheck className="size-4 shrink-0 text-brand sm:size-5" aria-label="Tasdiqlangan do'kon" />
-              </h1>
-              {store.description && <p className="line-clamp-1 text-sm text-muted-foreground">{store.description}</p>}
-            </div>
-          </div>
-
-          {hasProfileInfo && (
-            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
+        {hasProfileInfo && (
+          <div className="border-t px-4 py-2">
+            <div className="mx-auto flex max-w-5xl flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground sm:justify-start">
               {store.address && (
                 <span className="flex items-center gap-1.5">
                   <MapPin className="size-3.5 shrink-0 text-brand" />
@@ -124,12 +105,6 @@ export default async function StoreLayout({
                   ) : (
                     store.address
                   )}
-                </span>
-              )}
-              {store.workingHours && (
-                <span className="flex items-center gap-1.5">
-                  <Clock className="size-3.5 shrink-0 text-brand" />
-                  {store.workingHours}
                 </span>
               )}
               {store.contactPhone && (
@@ -151,11 +126,12 @@ export default async function StoreLayout({
                 </a>
               )}
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        )}
+      </header>
 
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-6 pb-24 sm:pb-6">{children}</main>
+      <MobileTabBar />
     </div>
   );
 }

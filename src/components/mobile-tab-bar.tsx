@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ShoppingBag, Receipt, User } from "lucide-react";
+import { Home, Heart, ShoppingBag, Receipt, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const TABS = [
   { href: "/", label: "Bosh sahifa", icon: Home },
+  { href: "/favorites", label: "Sevimlilar", icon: Heart },
   { href: "/cart", label: "Savat", icon: ShoppingBag },
   { href: "/orders", label: "Buyurtmalar", icon: Receipt },
   { href: "/account", label: "Profil", icon: User },
@@ -26,7 +27,7 @@ export function MobileTabBar() {
               key={href}
               href={href}
               className={cn(
-                "flex flex-1 flex-col items-center gap-1 rounded-xl py-1.5 text-[11px] font-medium transition-colors",
+                "flex flex-1 flex-col items-center gap-1 rounded-xl py-1.5 text-[10px] font-medium whitespace-nowrap transition-colors",
                 active ? "text-brand" : "text-muted-foreground"
               )}
             >

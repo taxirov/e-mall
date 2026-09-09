@@ -217,7 +217,7 @@ export function StorefrontCatalog({
             <button
               type="button"
               onClick={() => setCartOpen(true)}
-              className="fixed inset-x-4 bottom-4 z-30 flex items-center justify-between rounded-lg bg-brand px-4 py-3 text-brand-foreground shadow-lg"
+              className="fixed inset-x-4 bottom-20 z-30 flex items-center justify-between rounded-lg bg-brand px-4 py-3 text-brand-foreground shadow-lg sm:bottom-4"
             >
               <span className="flex items-center gap-2 font-medium">
                 <ShoppingCart className="size-5" />
