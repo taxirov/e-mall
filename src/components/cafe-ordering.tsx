@@ -2,9 +2,10 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { Minus, Plus, ShoppingCart, MapPin, BadgeCheck, UtensilsCrossed, ArrowLeft, Clock, Star, Bike, Info } from "lucide-react";
+import { Minus, Plus, ShoppingCart, MapPin, BadgeCheck, UtensilsCrossed, ArrowLeft, Clock, Star, Bike, Info, Search, PackageSearch } from "lucide-react";
 import { MobileTabBar } from "@/components/mobile-tab-bar";
 import { InfoBadges, type InfoBadge } from "@/components/info-badges";
+import { HeaderSearchButton } from "@/components/header-search-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
@@ -25,6 +26,7 @@ function cartKey(itemId: string, variantId?: string | null) {
 }
 
 export function CafeOrdering({ slug, cafe }: { slug: string; cafe: EcafeCafeMenu }) {
+  const [search, setSearch] = useState("");
   const [cart, setCart] = useState<Record<string, number>>({});
   const [cartOpen, setCartOpen] = useState(false);
   const [variantPickerItem, setVariantPickerItem] = useState<EcafeMenuItem | null>(null);
@@ -35,6 +37,14 @@ export function CafeOrdering({ slug, cafe }: { slug: string; cafe: EcafeCafeMenu
 
   const allItems = useMemo(() => cafe.categories.flatMap((c) => c.items), [cafe.categories]);
   const itemsById = useMemo(() => new Map(allItems.map((i) => [i.id, i])), [allItems]);
+
+  const filteredCategories = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return cafe.categories;
+    return cafe.categories
+      .map((c) => ({ ...c, items: c.items.filter((i) => i.name.toLowerCase().includes(q)) }))
+      .filter((c) => c.items.length > 0);
+  }, [cafe.categories, search]);
 
   const cartLines = Object.entries(cart)
     .filter(([, qty]) => qty > 0)
@@ -116,22 +126,34 @@ export function CafeOrdering({ slug, cafe }: { slug: string; cafe: EcafeCafeMenu
               <BadgeCheck className="size-4 shrink-0 text-brand" aria-label="Tasdiqlangan kafe" />
             </p>
           </div>
-          <div className="size-10 shrink-0" />
+          <HeaderSearchButton />
         </div>
-        <div className="border-t"><InfoBadges items={infoBadges} /></div>
-        {cafe.address && (
-          <div className="border-t px-4 py-2">
-            <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                <MapPin className="size-3.5 shrink-0 text-brand" /> {cafe.address}
-              </span>
-            </div>
-          </div>
-        )}
       </header>
 
+      <div className="border-b"><InfoBadges items={infoBadges} /></div>
+      {cafe.address && (
+        <div className="border-b px-4 py-2">
+          <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <MapPin className="size-3.5 shrink-0 text-brand" /> {cafe.address}
+            </span>
+          </div>
+        </div>
+      )}
+
       <div className="flex-1 space-y-6 px-4 py-5">
-        {cafe.categories.map((category) => (
+        <div className="relative">
+          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            id="catalog-search"
+            placeholder="Taom qidirish..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+
+        {filteredCategories.map((category) => (
           <section key={category.id}>
             <h2 className="mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">{category.name}</h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -214,8 +236,11 @@ export function CafeOrdering({ slug, cafe }: { slug: string; cafe: EcafeCafeMenu
             </div>
           </section>
         ))}
-        {cafe.categories.length === 0 && (
-          <p className="text-sm text-muted-foreground">Hozircha menyu bo&apos;sh.</p>
+        {filteredCategories.length === 0 && (
+          <div className="flex flex-col items-center gap-2 py-16 text-muted-foreground">
+            <PackageSearch className="size-8" />
+            <p className="text-sm">{cafe.categories.length === 0 ? "Hozircha menyu bo'sh." : "Taom topilmadi"}</p>
+          </div>
         )}
       </div>
 

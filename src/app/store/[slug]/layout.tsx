@@ -10,6 +10,7 @@ import { ScriptToggle } from "@/components/script-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { MobileTabBar } from "@/components/mobile-tab-bar";
 import { InfoBadges, type InfoBadge } from "@/components/info-badges";
+import { HeaderSearchButton } from "@/components/header-search-button";
 import { cn } from "@/lib/utils";
 
 export default async function StoreLayout({
@@ -44,15 +45,6 @@ export default async function StoreLayout({
 
   return (
     <div className={cn("flex min-h-svh flex-col", isSubdomainView && "storefront-independent")}>
-      {!isSubdomainView && (
-        <Link
-          href="/"
-          className="flex items-center justify-center gap-1.5 bg-brand px-4 py-1.5 text-center text-xs font-medium text-brand-foreground hover:underline"
-        >
-          <ArrowLeft className="size-3.5 shrink-0" />
-          e-mall.uz ichida ko&apos;rilmoqda — barcha do&apos;konlarga qaytish
-        </Link>
-      )}
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-5xl items-center gap-2 px-2 sm:px-4">
           <Link
@@ -71,74 +63,69 @@ export default async function StoreLayout({
             </p>
           </div>
 
-          {session?.user ? (
-            <div className="flex shrink-0 items-center gap-1">
-              <ScriptToggle className="hidden sm:flex" />
-              <ThemeToggle className="hidden sm:flex" />
-              {ONLINE_ORDERING_ENABLED && (
-                <Button render={<Link href="/orders" />} nativeButton={false} variant="ghost" size="sm" className="hidden sm:inline-flex">
-                  Buyurtmalarim
-                </Button>
-              )}
-              <form
-                action={async () => {
-                  "use server";
-                  await signOut({ redirectTo: "/" });
-                }}
-              >
-                <Button size="sm" variant="outline" type="submit">
-                  Chiqish
-                </Button>
-              </form>
-            </div>
-          ) : (
-            <div className="flex shrink-0 items-center gap-1">
-              <ScriptToggle className="hidden sm:flex" />
-              <ThemeToggle className="hidden sm:flex" />
-              <Button render={<Link href="/login" />} nativeButton={false} size="sm" variant="outline">
-                Kirish
-              </Button>
-            </div>
-          )}
-        </div>
-
-        <div className="border-t">
-          <div className="mx-auto max-w-5xl">
-            <InfoBadges items={infoBadges} />
+          <div className="flex shrink-0 items-center gap-1">
+            <ScriptToggle className="hidden sm:flex" />
+            <ThemeToggle className="hidden sm:flex" />
+            <HeaderSearchButton />
+            {session?.user && (
+              <>
+                {ONLINE_ORDERING_ENABLED && (
+                  <Button render={<Link href="/orders" />} nativeButton={false} variant="ghost" size="sm" className="hidden sm:inline-flex">
+                    Buyurtmalarim
+                  </Button>
+                )}
+                <form
+                  action={async () => {
+                    "use server";
+                    await signOut({ redirectTo: "/" });
+                  }}
+                >
+                  <Button size="sm" variant="outline" type="submit">
+                    Chiqish
+                  </Button>
+                </form>
+              </>
+            )}
           </div>
         </div>
-
-        {hasProfileInfo && (
-          <div className="border-t px-4 py-2">
-            <div className="mx-auto flex max-w-5xl flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground sm:justify-start">
-              {store.address && (
-                <span className="flex items-center gap-1.5">
-                  <MapPin className="size-3.5 shrink-0 text-brand" />
-                  {store.locationUrl ? (
-                    <a href={store.locationUrl} target="_blank" rel="noopener noreferrer" className="hover:text-foreground hover:underline">
-                      {store.address}
-                    </a>
-                  ) : (
-                    store.address
-                  )}
-                </span>
-              )}
-              {store.instagramUrl && (
-                <a href={store.instagramUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-foreground hover:underline">
-                  <ExternalLink className="size-3.5 shrink-0 text-brand" />
-                  Instagram
-                </a>
-              )}
-              {store.telegramUrl && (
-                <a href={store.telegramUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-foreground hover:underline">
-                  <ExternalLink className="size-3.5 shrink-0 text-brand" />
-                  Telegram
-                </a>
-              )}
-            </div>
-          </div>
-        )}
       </header>
+
+      <div className="border-b">
+        <div className="mx-auto max-w-5xl">
+          <InfoBadges items={infoBadges} />
+        </div>
+      </div>
+
+      {hasProfileInfo && (
+        <div className="border-b px-4 py-2">
+          <div className="mx-auto flex max-w-5xl flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground sm:justify-start">
+            {store.address && (
+              <span className="flex items-center gap-1.5">
+                <MapPin className="size-3.5 shrink-0 text-brand" />
+                {store.locationUrl ? (
+                  <a href={store.locationUrl} target="_blank" rel="noopener noreferrer" className="hover:text-foreground hover:underline">
+                    {store.address}
+                  </a>
+                ) : (
+                  store.address
+                )}
+              </span>
+            )}
+            {store.instagramUrl && (
+              <a href={store.instagramUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-foreground hover:underline">
+                <ExternalLink className="size-3.5 shrink-0 text-brand" />
+                Instagram
+              </a>
+            )}
+            {store.telegramUrl && (
+              <a href={store.telegramUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-foreground hover:underline">
+                <ExternalLink className="size-3.5 shrink-0 text-brand" />
+                Telegram
+              </a>
+            )}
+          </div>
+        </div>
+      )}
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-6 pb-24 sm:pb-6">{children}</main>
       <MobileTabBar />
