@@ -59,9 +59,11 @@ export default auth((req) => {
     return NextResponse.rewrite(url, { request: { headers } });
   }
 
-  // e-mall.uz is the public landing page — auth/dashboard pages live on
-  // app.e-mall.uz only, so send those requests over there.
-  if (!storeSlug && !appHost) {
+  // e-mall.uz is the public landing page and store subdomains are for
+  // browsing that store only — auth/dashboard pages live on app.e-mall.uz
+  // only, so send those requests over there regardless of which host
+  // (root domain or a store's own subdomain) they were requested on.
+  if (!appHost) {
     const isAppOnlyPath = APP_ONLY_PATH_PREFIXES.some((p) => nextUrl.pathname.startsWith(p));
     if (isAppOnlyPath) {
       const url = new URL(`${nextUrl.pathname}${nextUrl.search}`, appOrigin(host));
